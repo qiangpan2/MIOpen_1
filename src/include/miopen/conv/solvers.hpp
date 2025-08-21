@@ -4524,6 +4524,33 @@ private:
     bool CheckIsSupportCKArgs(const miopen::conv::ProblemDescription&) const;
 };
 
+struct PerformanceConfigConv3DChannelLastFwdWmmaops
+{
+    int instance_id = 0; // ID of the selected CK instance
+
+    PerformanceConfigConv3DChannelLastFwdWmmaops(int idx, std::string kernl_id)
+        : instance_id(idx)
+    {
+    }
+
+    PerformanceConfigConv3DChannelLastFwdWmmaops() = default;
+
+    explicit PerformanceConfigConv3DChannelLastFwdWmmaops(bool)
+        : PerformanceConfigConv3DChannelLastFwdWmmaops(0, "")
+    {
+    }
+    MIOPEN_INTERNALS_EXPORT void HeuristicInit(const miopen::conv::ProblemDescription&);
+    MIOPEN_INTERNALS_EXPORT bool SetNextValue(const miopen::conv::ProblemDescription&);
+    MIOPEN_INTERNALS_EXPORT bool IsValidValue() const;
+    bool IsValid(const ExecutionContext&, const miopen::conv::ProblemDescription& problem) const
+    {
+        return IsValid(problem);
+    }
+    MIOPEN_INTERNALS_EXPORT bool IsValid(const miopen::conv::ProblemDescription&) const;
+    MIOPEN_INTERNALS_EXPORT bool
+    operator==(const PerformanceConfigConv3DChannelLastFwdWmmaops& other) const;
+};
+
 struct ConvHipImplicitGemm3DGroupFwdXdlops final
     : ConvTunableSolver<PerformanceConfigHipImplicitGemm3DGroupFwdXdlops>
 {
@@ -4550,6 +4577,28 @@ struct ConvHipImplicitGemm3DGroupFwdXdlops final
     GetSolution(const ExecutionContext&,
                 const miopen::conv::ProblemDescription&,
                 const PerformanceConfigHipImplicitGemm3DGroupFwdXdlops&) const override;
+    /// \ref igemm_get_wti_magic_number
+    float GetWti(const ExecutionContext&, const miopen::conv::ProblemDescription&) const override
+    {
+        return 0.02f;
+    };
+};
+
+struct ConvHipImplicitGemm3DChannelLastFwdWmmaops final
+    : ConvSolver
+{
+    const std::string& SolverDbId() const override
+    {
+        return GetSolverDbId<ConvHipImplicitGemm3DChannelLastFwdWmmaops>();
+    }
+
+    MIOPEN_INTERNALS_EXPORT bool
+    IsApplicable(const ExecutionContext&, const miopen::conv::ProblemDescription&) const override;
+    bool IsDynamic() const override { return true; }
+    MIOPEN_INTERNALS_EXPORT ConvSolution
+    GetSolution(const ExecutionContext&,
+                const miopen::conv::ProblemDescription&,
+                const PerformanceConfigConv3DChannelLastFwdWmmaops&) const override;
     /// \ref igemm_get_wti_magic_number
     float GetWti(const ExecutionContext&, const miopen::conv::ProblemDescription&) const override
     {

@@ -1,0 +1,418 @@
+/*******************************************************************************
+ *
+ * MIT License
+ *
+ * Copyright (c) 2023 Advanced Micro Devices, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
+
+#include <miopen/conv/solvers.hpp>
+#include <miopen/env.hpp>
+#include <miopen/generic_search.hpp>
+#include <miopen/conv/data_invoke_params.hpp>
+#include <miopen/solver/problem_description_interpreter.hpp>
+
+// Include Composable Kernel headers for 3D convolution with channel last layout
+#if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
+#include <miopen/solver/ck_utility_common.hpp>
+// Include CK tile headers for 3D convolution
+#include <ck_tile/ops/grouped_convolution.hpp>
+#include <ck_tile/ops/grouped_convolution/utils/grouped_convolution_utils.hpp>
+#endif
+
+#include <miopen/solver/implicitgemm_ck_util.hpp>
+
+MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_DEBUG_3D_CONV_IMPLICIT_GEMM_HIP_CHANNEL_LAST_FWD_WMMAOPS)
+
+namespace miopen {
+namespace solver {
+namespace conv {
+
+using ProblemDescription = miopen::conv::ProblemDescription;
+
+#if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
+
+// Define the layout types for channel last 3D convolution
+using InLayout  = ck_tile::tensor_layout::convolution::NDHWC; // Channel last input layout
+using WeiLayout = ck_tile::tensor_layout::convolution::GKZYXC; // Weight layout
+using OutLayout = ck_tile::tensor_layout::convolution::NDHWGK; // Channel last output layout
+
+// Define the element-wise operation (e.g., PassThrough)
+using PassThrough = ck_tile::element_wise::PassThrough;
+
+// Number of spatial dimensions for 3D convolution
+static constexpr ck_tile::index_t NumDimSpatial = 3;
+
+// Define the device operation type using CK tile
+template <typename DataType>
+using DeviceOp3DChannelLastFwd =
+    ck_tile::GroupedConvFwdKernelArgs<
+        ck_tile::GroupedConvTraits<NumDimSpatial,
+                                   ck_tile::ConvolutionSpecialization::Default,
+                                   InLayout,
+                                   WeiLayout,
+                                   ck_tile::tuple<>,
+                                   OutLayout>>;
+
+// Type alias for Host Arguments
+using GroupedConvFwdHostArgs = ck_tile::GroupedConvFwdHostArgs;
+
+namespace {
+
+// Structure to hold arguments for the Composable Kernel
+template <typename DataType>
+struct CKArgs3DChannelLastFwd
+{
+    CKArgs3DChannelLastFwd(const ProblemDescription& problem)
+    {
+        // Extract dimensions from the problem description
+        G  = ProblemInterpreter::GetGroupCountG(problem);
+        N  = ProblemInterpreter::GetBatchN(problem);
+        K1 = ProblemInterpreter::GetOutputChannelK(problem);
+        C1 = ProblemInterpreter::GetInputChannelC(problem);
+        C  = C1 / G; // Number of input Channels per group
+        K  = K1 / G; // Number of output Channels per group
+        Di = ProblemInterpreter::GetInputDepthDi(problem);
+        Hi = ProblemInterpreter::GetInputHeightHi(problem);
+        Wi = ProblemInterpreter::GetInputWidthWi(problem);
+        Do = ProblemInterpreter::GetOutputDepthDo(problem);
+        Ho = ProblemInterpreter::GetOutputHeightHo(problem);
+        Wo = ProblemInterpreter::GetOutputWidthWo(problem);
+        Z  = ProblemInterpreter::GetFilterDepthZ(problem);
+        Y  = ProblemInterpreter::GetFilterHeightY(problem);
+        X  = ProblemInterpreter::GetFilterWidthX(problem);
+
+        // Set strides, dilations, and padding
+        filter_strides   = {ProblemInterpreter::GetAdjustedConvolutionStrideD(problem),
+                            ProblemInterpreter::GetAdjustedConvolutionStrideH(problem),
+                            ProblemInterpreter::GetAdjustedConvolutionStrideW(problem)};
+        filter_dilations = {ProblemInterpreter::GetAdjustedConvolutionDilationD(problem),
+                            ProblemInterpreter::GetAdjustedConvolutionDilationH(problem),
+                            ProblemInterpreter::GetAdjustedConvolutionDilationW(problem)};
+        lPadding         = {ProblemInterpreter::GetInputLeftPadD(problem),
+                            ProblemInterpreter::GetInputLeftPadH(problem),
+                            ProblemInterpreter::GetInputLeftPadW(problem)};
+        rPadding         = {ProblemInterpreter::GetAdjustedInputRightPadD(problem),
+                            ProblemInterpreter::GetAdjustedInputRightPadH(problem),
+                            ProblemInterpreter::GetAdjustedInputRightPadW(problem)};
+    }
+
+    // Helper function to create ConvParam
+    ck_tile::conv::ConvParam MakeConvParam() const
+    {
+        return ck_tile::conv::ConvParam(
+            NumDimSpatial,  // num_dim_spatial
+            G,              // group_count
+            N,              // n_batch
+            K,              // n_out_channels
+            C,              // n_in_channels
+            {Z, Y, X},      // filters_len
+            {Di, Hi, Wi},   // input_len
+            filter_strides, // strides
+            filter_dilations, // dilations
+            lPadding,       // left_pads
+            rPadding        // right_pads
+        );
+    }
+
+    // Function to create Host Arguments for CK tile
+    GroupedConvFwdHostArgs MakeHostArgs(const miopen::conv::DataInvokeParams& data_ctx) const
+    {
+        auto conv_param = MakeConvParam();
+
+        // Get tensor descriptors
+        const auto& tensors = data_ctx.tensors;
+
+        // Create Host Arguments
+        // Note: We are using void* pointers here as placeholders.
+        // The actual data pointers will be set by the invoker.
+        GroupedConvFwdHostArgs host_args(
+            conv_param,
+            static_cast<const void*>(tensors.in),  // in_ptr
+            static_cast<const void*>(tensors.w),   // wei_ptr
+            {},                                    // ds_ptr (empty for now)
+            static_cast<void*>(tensors.out),       // out_ptr
+            1                                      // k_batch (default to 1)
+        );
+
+        return host_args;
+    }
+
+    // Function to create Kernel Arguments for CK tile
+    // This is the main function that will be called by the invoker
+    std::unique_ptr<typename DeviceOp3DChannelLastFwd<DataType>::Argument>
+    MakeArgument(const miopen::conv::DataInvokeParams& data_ctx) const
+    {
+        // Create Host Arguments
+        auto host_args = MakeHostArgs(data_ctx);
+
+        // Create Device Operation instance
+        // Note: In a real implementation, you might get this from a registry or factory.
+        // For now, we'll create a default instance.
+        auto device_op = std::make_unique<DeviceOp3DChannelLastFwd<DataType>>();
+
+        // Create Kernel Arguments from Host Arguments
+        // Note: This assumes that the DeviceOp has a constructor that takes HostArgs.
+        // If not, we'll need to adapt the approach.
+        auto argument = std::make_unique<typename DeviceOp3DChannelLastFwd<DataType>::Argument>(host_args);
+
+        return argument;
+    }
+
+    // Tensor dimensions
+    int G;  // Groups
+    int N;  // Batch size
+    int K1; // Output channels
+    int C1; // Input channels
+    int C;  // Input channels per group
+    int K;  // Output channels per group
+    int Di; // Input depth
+    int Hi; // Input height
+    int Wi; // Input width
+    int Do; // Output depth
+    int Ho; // Output height
+    int Wo; // Output width
+    int Z;  // Filter depth
+    int Y;  // Filter height
+    int X;  // Filter width
+
+    // Convolution parameters
+    std::vector<ck_tile::index_t> filter_strides;
+    std::vector<ck_tile::index_t> filter_dilations;
+    std::vector<ck_tile::index_t> lPadding;
+    std::vector<ck_tile::index_t> rPadding;
+};
+
+} // namespace
+
+// Performance configuration methods implementation
+void PerformanceConfigConv3DChannelLastFwdWmmaops::HeuristicInit(
+    const miopen::conv::ProblemDescription&)
+{
+    instance_id = 0;
+}
+
+bool PerformanceConfigConv3DChannelLastFwdWmmaops::SetNextValue(
+    const miopen::conv::ProblemDescription&)
+{
+    // For simplicity, we're not implementing a complex search here
+    // In a real implementation, you would iterate through different CK instances
+    return false;
+}
+
+bool PerformanceConfigConv3DChannelLastFwdWmmaops::IsValidValue() const
+{
+    // For simplicity, we assume any configuration is valid
+    // In a real implementation, you would check if the selected instance is valid
+    return true;
+}
+
+bool PerformanceConfigConv3DChannelLastFwdWmmaops::IsValid(
+    const miopen::conv::ProblemDescription&) const
+{
+    // For simplicity, we assume any configuration is valid
+    // In a real implementation, you would validate the configuration
+    return true;
+}
+
+bool PerformanceConfigConv3DChannelLastFwdWmmaops::operator==(
+    const PerformanceConfigConv3DChannelLastFwdWmmaops& other) const
+{
+    return instance_id == other.instance_id;
+}
+
+// Solver class
+struct ConvHipImplicitGemm3DChannelLastFwdWmmaops : Solver
+{
+    // Check if this solver is applicable for the given problem
+    bool IsApplicable(const ExecutionContext& ctx, const ProblemDescription& problem) const override
+    {
+        // Check if the solver is enabled by environment variable
+        if(env::disabled(MIOPEN_DEBUG_3D_CONV_IMPLICIT_GEMM_HIP_CHANNEL_LAST_FWD_WMMAOPS))
+        {
+            return false;
+        }
+
+        // Check if HIP backend is used
+        if(!ctx.use_hip_kernels)
+        {
+            return false;
+        }
+
+        // Check if the hardware is supported
+        if(!ck_utility::is_ck_supported_hardware(ctx))
+        {
+            return false;
+        }
+
+        // Check if it's a 3D convolution
+        if(!problem.Is3d())
+        {
+            return false;
+        }
+
+        // Check if it's a forward convolution
+        if(!problem.IsDirectionForward())
+        {
+            return false;
+        }
+
+        // Check if it's channel last layout (NHWC for 2D, NDHWC for 3D)
+        if(!problem.IsLayoutNHWC())
+        {
+            return false;
+        }
+
+        // Check data type support (e.g., FP32, FP16)
+        if(!(problem.IsFp32() || problem.IsFp16()))
+        {
+            return false;
+        }
+
+        // Check if tensors fit into int
+        if(!problem.AllTensorsDimsFitIntoInt())
+        {
+            return false;
+        }
+
+        // Check if it's a grouped convolution (including group count of 1)
+        // This solver is designed for grouped convolutions
+        if(problem.GetGroupCount() < 1)
+        {
+            return false;
+        }
+
+        // Check if tensors are not casted
+        if(problem.IsTensorsCasted())
+        {
+            return false;
+        }
+
+        // Additional checks can be added here based on specific requirements
+
+        return true;
+    }
+
+    // Get the default performance configuration
+    ConvSolution GetDefaultPerformanceConfig(const ExecutionContext&, const ProblemDescription& problem) const override
+    {
+        // For now, return a default configuration
+        PerformanceConfigConv3DChannelLastFwdWmmaops config;
+        config.HeuristicInit(problem);
+        return config;
+    }
+
+    // Check if a performance configuration is valid
+    bool IsValidPerformanceConfig(const ExecutionContext&, const ProblemDescription&, const AnyInvokeParams&) const override
+    {
+        // For now, we assume any configuration is valid
+        // In a real implementation, you would validate the configuration
+        return true;
+    }
+
+    // Get the solution for the given problem and configuration
+    ConvSolution GetSolution(const ExecutionContext& ctx, const ProblemDescription& problem, const AnyInvokeParams& params) const override
+    {
+        ConvSolution sol;
+
+        // Get the performance configuration
+        const auto& perf_config = params.CastTo<PerformanceConfigConv3DChannelLastFwdWmmaops>();
+
+        // Create CK arguments
+        CKArgs3DChannelLastFwd<float> ck_args(problem);
+
+        // Set up the invoker factory
+        // This is based on the pattern used in implicitgemm_ck_util.hpp
+        sol.invoker_factory = [=](const std::vector<Kernel>& kernels) {
+            return [=](const Handle& handle, const AnyInvokeParams& primitive_params) {
+                // Cast to the correct invoke parameters type
+                const auto& data_ctx = primitive_params.CastTo<miopen::conv::DataInvokeParams>();
+
+                // Create the kernel arguments
+                auto argument_ptr = ck_args.MakeArgument(data_ctx);
+
+                // Create a device operation instance
+                // Note: In a real implementation, you would get this from a registry or factory
+                // based on the kernel ID. For now, we'll create a default instance.
+                auto device_op = std::make_unique<DeviceOp3DChannelLastFwd<float>>();
+
+                // Create an invoker
+                auto invoker_ptr = device_op->MakeInvokerPointer();
+
+                // Run the kernel
+                const auto enable_profiling = handle.IsProfilingEnabled();
+                float elapsed_time = invoker_ptr->Run(argument_ptr.get(), {handle.GetStream(), enable_profiling});
+
+                if(enable_profiling)
+                {
+                    handle.ResetKernelTime();
+                    handle.AccumKernelTime(elapsed_time);
+                }
+            };
+        };
+
+        return sol;
+    }
+
+    // Search for the best performance configuration
+    // For now, we'll just return the default configuration
+    ConvSolution Search(const ExecutionContext& ctx, const ProblemDescription& problem, const AnyInvokeParams& invoke_ctx) const override
+    {
+        return GenericSearch(*this, ctx, problem, invoke_ctx);
+    }
+};
+
+} // namespace conv
+
+// Performance configuration methods implementation
+void PerformanceConfigConv3DChannelLastFwdWmmaops::HeuristicInit(
+    const ExecutionContext&,
+    const miopen::conv::ProblemDescription& problem)
+{
+    HeuristicInit(problem);
+}
+
+bool PerformanceConfigConv3DChannelLastFwdWmmaops::SetNextValue(
+    const miopen::conv::ProblemDescription& problem)
+{
+    return SetNextValue(problem);
+}
+
+bool PerformanceConfigConv3DChannelLastFwdWmmaops::IsValidValue() const
+{
+    return IsValidValue();
+}
+
+bool PerformanceConfigConv3DChannelLastFwdWmmaops::IsValid(
+    const ExecutionContext&,
+    const miopen::conv::ProblemDescription& problem) const
+{
+    return IsValid(problem);
+}
+
+bool PerformanceConfigConv3DChannelLastFwdWmmaops::IsValid(
+    const miopen::conv::ProblemDescription& problem) const
+{
+    return IsValid(problem);
+}
+
+} // namespace solver
+} // namespace miopen
