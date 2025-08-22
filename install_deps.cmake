@@ -64,6 +64,29 @@ endfunction()
 
 virtualenv_install(cget)
 
+function(patch_cget_builder)
+    # Get Python version for dynamic path
+    execute_process(
+        COMMAND ${PREFIX}/bin/python -c "import sys; print(f'python{sys.version_info.major}.{sys.version_info.minor}')"
+        OUTPUT_VARIABLE PYTHON_VERSION
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    execute_process(
+        COMMAND sed -i "s/multiprocessing.cpu_count()/8/g" "${PREFIX}/lib/${PYTHON_VERSION}/site-packages/cget/builder.py"
+        RESULT_VARIABLE PATCH_RESULT
+    )
+    if(PATCH_RESULT EQUAL 0)
+        message("Applied cget builder.py patch: limited multiprocessing.cpu_count() to 8 cores")
+    else()
+        message(WARNING "Failed to patch cget builder.py (may not exist yet)")
+    endif()
+endfunction()
+
+# Apply cget builder.py patch
+patch_cget_builder()
+
+
 # Set compiler to hip-clang if not set
 if(NOT DEFINED ENV{CXX} AND NOT DEFINED CMAKE_CXX_COMPILER AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     find_program(CLANGXX clang++
@@ -113,5 +136,9 @@ cget(init ${TOOLCHAIN_FLAG} -DCMAKE_INSTALL_RPATH=${PREFIX}/lib ${PARSE_UNPARSED
 cget(ignore pcre)
 
 # Install dependencies
-cget(install -U ROCm/rocm-recipes@92c6695449c85887962f45509b376f2eb0d284f7)
-cget(install -U -f requirements.txt)
+# cget(install -U ROCm/rocm-recipes@92c6695449c85887962f45509b376f2eb0d284f7)
+# cget(install -U -f requirements.txt)
+
+# Install composable_kernel with Ninja generator
+cget(install -U ROCm/composable_kernel@26d33009306b0e77d3f51f071f8367f4c5bdf353 -DCMAKE_BUILD_TYPE=Release -DGPU_TARGETS="gfx1100" -DUSE_OPT_GFX11=ON -DCMAKE_HIP_COMPILER=/opt/rocm/llvm/bin/clang++ -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ -G Ninja
+)
