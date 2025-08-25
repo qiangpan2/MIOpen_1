@@ -4525,6 +4525,7 @@ private:
 };
 
 struct PerformanceConfigConv3DChannelLastFwdWmmaops
+    : PerfConfigBase<PerformanceConfigConv3DChannelLastFwdWmmaops>
 {
     int instance_id = 0; // ID of the selected CK instance
 
@@ -4585,7 +4586,7 @@ struct ConvHipImplicitGemm3DGroupFwdXdlops final
 };
 
 struct ConvHipImplicitGemm3DChannelLastFwdWmmaops final
-    : ConvSolver
+    : ConvTunableSolver<PerformanceConfigConv3DChannelLastFwdWmmaops>
 {
     const std::string& SolverDbId() const override
     {
@@ -4595,6 +4596,19 @@ struct ConvHipImplicitGemm3DChannelLastFwdWmmaops final
     MIOPEN_INTERNALS_EXPORT bool
     IsApplicable(const ExecutionContext&, const miopen::conv::ProblemDescription&) const override;
     bool IsDynamic() const override { return true; }
+    
+    /// Tunable solver methods
+    MIOPEN_INTERNALS_EXPORT PerformanceConfigConv3DChannelLastFwdWmmaops
+    GetDefaultPerformanceConfig(const ExecutionContext&,
+                                const miopen::conv::ProblemDescription&) const override;
+    MIOPEN_INTERNALS_EXPORT bool
+    IsValidPerformanceConfig(const ExecutionContext&,
+                             const miopen::conv::ProblemDescription&,
+                             const PerformanceConfigConv3DChannelLastFwdWmmaops&) const override;
+    MIOPEN_INTERNALS_EXPORT PerformanceConfigConv3DChannelLastFwdWmmaops
+    Search(const ExecutionContext&,
+           const miopen::conv::ProblemDescription&,
+           const AnyInvokeParams& invoke_ctx) const override;
     MIOPEN_INTERNALS_EXPORT ConvSolution
     GetSolution(const ExecutionContext&,
                 const miopen::conv::ProblemDescription&,
