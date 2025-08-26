@@ -40,6 +40,10 @@
 #include <ck_tile/ops/grouped_convolution/utils/grouped_convolution_utils.hpp>
 // Include stream_config for kernel execution
 #include <ck_tile/host/stream_config.hpp>
+// Include kernel launch functions
+#include <ck_tile/host/kernel_launch.hpp>
+// Include the grouped convolution forward kernel
+#include <ck_tile/ops/grouped_convolution/kernel/grouped_convolution_forward_kernel.hpp>
 #endif
 
 MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_DEBUG_3D_CONV_IMPLICIT_GEMM_HIP_CHANNEL_LAST_FWD_WMMAOPS)
@@ -238,12 +242,11 @@ bool PerformanceConfigConv3DChannelLastFwdWmmaops::operator==(
     return instance_id == other.instance_id;
 }
 
-} // namespace conv
 
 // Implementation of ConvHipImplicitGemm3DChannelLastFwdWmmaops methods
 
 // Check if this solver is applicable for the given problem
-bool miopen::solver::conv::ConvHipImplicitGemm3DChannelLastFwdWmmaops::IsApplicable(
+bool ConvHipImplicitGemm3DChannelLastFwdWmmaops::IsApplicable(
     const ExecutionContext& ctx, const ProblemDescription& problem) const
 {
     // Check if the solver is enabled by environment variable
@@ -313,8 +316,8 @@ bool miopen::solver::conv::ConvHipImplicitGemm3DChannelLastFwdWmmaops::IsApplica
 }
 
 // Get the default performance configuration
-miopen::solver::conv::PerformanceConfigConv3DChannelLastFwdWmmaops
-miopen::solver::conv::ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetDefaultPerformanceConfig(
+PerformanceConfigConv3DChannelLastFwdWmmaops
+ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetDefaultPerformanceConfig(
     const ExecutionContext&, const ProblemDescription& problem) const
 {
     // For now, return a default configuration
@@ -324,10 +327,10 @@ miopen::solver::conv::ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetDefaultPerf
 }
 
 // Check if a performance configuration is valid
-bool miopen::solver::conv::ConvHipImplicitGemm3DChannelLastFwdWmmaops::IsValidPerformanceConfig(
+bool ConvHipImplicitGemm3DChannelLastFwdWmmaops::IsValidPerformanceConfig(
     const ExecutionContext& ctx,
     const ProblemDescription& problem,
-    const miopen::solver::conv::PerformanceConfigConv3DChannelLastFwdWmmaops& config) const
+    const PerformanceConfigConv3DChannelLastFwdWmmaops& config) const
 {
     // For now, we assume any configuration is valid
     // In a real implementation, you would validate the configuration
@@ -336,8 +339,8 @@ bool miopen::solver::conv::ConvHipImplicitGemm3DChannelLastFwdWmmaops::IsValidPe
 
 // Search for the best performance configuration
 // For now, we'll just return the default configuration
-miopen::solver::conv::PerformanceConfigConv3DChannelLastFwdWmmaops
-miopen::solver::conv::ConvHipImplicitGemm3DChannelLastFwdWmmaops::Search(
+PerformanceConfigConv3DChannelLastFwdWmmaops
+ConvHipImplicitGemm3DChannelLastFwdWmmaops::Search(
     const ExecutionContext& ctx,
     const ProblemDescription& problem,
     const AnyInvokeParams& invoke_ctx) const
@@ -357,33 +360,55 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
     CKArgs3DChannelLastFwd<float> ck_args(problem);
 
     // Set up the invoker factory
-    // This is based on the pattern used in implicitgemm_ck_util.hpp
+    // This is based on the pattern used in implicitgemm_ck_util.hpp and MHA solver
     sol.invoker_factory = [=](const std::vector<Kernel>& kernels) {
         return [=](const Handle& handle, const AnyInvokeParams& primitive_params) {
             // Cast to the correct invoke parameters type
             const auto& data_ctx = primitive_params.CastTo<miopen::conv::DataInvokeParams>();
 
-            // Create the kernel arguments
-            auto argument_ptr = ck_args.MakeArgument(data_ctx);
+            // Create the host arguments
+            auto host_args = ck_args.MakeHostArgs(data_ctx);
+            
+            // Convert host args to kernel args
+            // DeviceOp3DChannelLastFwd is an alias for GroupedConvFwdKernelArgs with specific traits
+            // The constructor of GroupedConvFwdKernelArgs takes HostArgs
+            using DataType = float; // Assuming float for now, this should match the template parameter of DeviceOp3DChannelLastFwd
+            using KernelArgsType = DeviceOp3DChannelLastFwd<DataType>;
+            KernelArgsType kernel_args(host_args);
 
             // Create a stream_config object for CK Tile
             ck_tile::stream_config ck_stream_config{handle.GetStream(), handle.IsProfilingEnabled()};
             
-            // TODO: Implement actual kernel launch using CK Tile API
-            // This will involve finding a suitable kernel instance and invoking it.
-            // Example of what the real code might look like:
-            /*
-            auto kernel_instances = DeviceOp3DChannelLastFwd<float>::GetInstances();
-            if (!kernel_instances.empty()) {
-                // Select the best kernel instance based on heuristics or config
-                auto& selected_kernel = kernel_instances[0]; 
-                // Run the kernel with the arguments and stream config
-                // selected_kernel->Run(argument_ptr.get(), ck_stream_config);
-            }
-            */
+            // Determine grid and block sizes
+            // We need to instantiate the kernel struct to get grid size
+            using KernelType = ck_tile::GroupedConvFwdKernel<
+                typename KernelArgsType::GroupedConvTraitsType,
+                DataType,   // InDataType
+                DataType,   // WeiDataType
+                DataType,   // OutDataType
+                DataType,   // AccDataType
+                DataType,   // COutDataType
+                ck_tile::TileGemmTraits<>, // GemmTraits
+                ck_tile::DefaultStreamKReductionTraits, // StreamKTraits
+                ck_tile::DefaultGroupedConvTilePartitioner, // TilePartitioner
+                ck_tile::DefaultGemmPipeline, // GemmPipeline
+                ck_tile::DefaultGroupedConvEpiloguePipeline // EpiloguePipeline
+            >;
             
-            // TODO: Implement actual kernel execution time measurement
-            float elapsed_time = 0.0f;
+            dim3 block_dim(KernelType::kBlockSize, 1, 1);
+            dim3 grid_dim = KernelType::GridSize(kernel_args);
+            
+            // Create kernel launcher
+            auto kernel_launcher = ck_tile::make_kernel<CK_TILE_MIN_BLOCK_PER_CU>(
+                KernelType{}, 
+                grid_dim, 
+                block_dim, 
+                KernelType::GetSmemSize(), 
+                kernel_args
+            );
+            
+            // Launch kernel and measure time
+            float elapsed_time = ck_tile::launch_kernel(ck_stream_config, kernel_launcher);
 
             if(handle.IsProfilingEnabled())
             {
@@ -395,5 +420,10 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
 
     return sol;
 }
+
+
+} // namespace conv
+} // namespace solver
+} // namespace miopen
 
 #endif // MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
