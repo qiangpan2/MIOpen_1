@@ -37,19 +37,8 @@
 #include <miopen/solver/implicitgemm_ck_tile_util.hpp>
 // Include specific CK tile headers if needed beyond what's in the utility
 #include <ck_tile/ops/grouped_convolution.hpp>
-#include <ck_tile/ops/grouped_convolution/utils/grouped_convolution_utils.hpp>
-// Include stream_config for kernel execution
-#include <ck_tile/host/stream_config.hpp>
-// Include kernel launch functions
-#include <ck_tile/host/kernel_launch.hpp>
-// Include the grouped convolution forward kernel
-#include <ck_tile/ops/grouped_convolution/kernel/grouped_convolution_forward_kernel.hpp>
-// Include common utils for gemm_prec_str
-#include <ck_tile/ops/common/utils.hpp>
-// Include TileGemmShape
-#include <ck_tile/ops/gemm/kernel/gemm_kernel.hpp>
-// Include GemmPipeline
-#include <ck_tile/ops/gemm/pipeline/gemm_pipeline.hpp>
+// Include all necessary GEMM components via the main GEMM header
+#include <ck_tile/ops/gemm.hpp>
 // Include Epilogue
 #include <ck_tile/ops/epilogue.hpp>
 #endif

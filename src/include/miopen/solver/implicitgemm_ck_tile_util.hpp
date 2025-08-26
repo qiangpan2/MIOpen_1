@@ -39,35 +39,22 @@
 #include <ck_tile/ops/elementwise.hpp> // For PassThrough
 #include <ck_tile/ops/common/utils.hpp> // For gemm_prec_str
 #include <ck_tile/host/stream_config.hpp> // For stream_config
-// Include headers for potentially used types
-#include <ck_tile/ops/gemm/pipeline/tile_gemm_traits.hpp> // For TileGemmTraits if needed elsewhere
-#include <ck_tile/ops/grouped_convolution/utils/grouped_convolution_utils.hpp> // Might contain relevant utils/traits
+// Include kernel launch functions
+#include <ck_tile/host/kernel_launch.hpp>
 
 namespace miopen {
 namespace solver {
-namespace conv_ck_tile { // Use a distinct namespace for CK Tile utilities
+namespace conv_ck_tile { 
 
-// Common type aliases for CK Tile operations
-// Layouts are chosen to be compatible with CK Tile's built-in transformations.
+
 // Solvers using Channel-Last (NDHWC) data may need to transpose to these layouts.
 using InLayout    = ck_tile::tensor_layout::convolution::NDHWGC;
 using WeiLayout   = ck_tile::tensor_layout::convolution::GKZYXC;
 using OutLayout   = ck_tile::tensor_layout::convolution::NDHWGK;
 using PassThrough = ck_tile::element_wise::PassThrough; // Fixed namespace
 
-// If other element-wise ops are needed, define them here:
-// using Bilinear = ck_tile::element_wise::Bilinear;
-// using Scale = ck_tile::element_wise::Scale;
-
-// Alias for TileGemmTraits if it's used in solvers or needed for consistency
-// using TileGemmTraits = ck_tile::TileGemmTraits; // This might not be necessary as a direct alias
-
-// Type alias for stream_config to match CK Tile's type
 using StreamConfig = ck_tile::stream_config;
 
-// Helper function or alias for gemm_prec_str if needed directly
-// template <typename A, typename B>
-// std::string GetGemmPrecStr() { return ck_tile::gemm_prec_str<A, B>(); }
 
 } // namespace conv_ck_tile
 } // namespace solver
