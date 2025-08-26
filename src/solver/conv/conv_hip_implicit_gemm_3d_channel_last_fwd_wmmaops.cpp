@@ -44,6 +44,14 @@
 #include <ck_tile/host/kernel_launch.hpp>
 // Include the grouped convolution forward kernel
 #include <ck_tile/ops/grouped_convolution/kernel/grouped_convolution_forward_kernel.hpp>
+// Include common utils for gemm_prec_str
+#include <ck_tile/ops/common/utils.hpp>
+// Include TileGemmShape
+#include <ck_tile/ops/gemm/kernel/gemm_kernel.hpp>
+// Include GemmPipeline
+#include <ck_tile/ops/gemm/pipeline/gemm_pipeline.hpp>
+// Include Epilogue
+#include <ck_tile/ops/epilogue.hpp>
 #endif
 
 MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_DEBUG_3D_CONV_IMPLICIT_GEMM_HIP_CHANNEL_LAST_FWD_WMMAOPS)
@@ -59,27 +67,18 @@ using ProblemDescription = miopen::conv::ProblemDescription;
 // Use type aliases from the new CK Tile utility header
 using namespace miopen::solver::conv_ck_tile;
 
-// If specific layouts different from the utility header are needed, redefine them here
-// For example, if the utility uses NDHWGC but this solver needs NDHWC:
-// using InLayoutSpecific = ck_tile::tensor_layout::convolution::NDHWC;
-// Or, if the utility's defaults are fine, no need to redefine them.
-
-// The PassThrough alias is now provided by the utility header.
-
 // Number of spatial dimensions for 3D convolution
 static constexpr ck_tile::index_t NumDimSpatial = 3;
 
-// Define the device operation type using CK tile with explicit Channel Last layouts
-// We need to explicitly use the Channel Last layouts here, not the default ones from the utility header
 template <typename DataType>
 using DeviceOp3DChannelLastFwd =
     ck_tile::GroupedConvFwdKernelArgs<
         ck_tile::GroupedConvTraits<NumDimSpatial,
                                    ck_tile::ConvolutionSpecialization::Default,
-                                   ck_tile::tensor_layout::convolution::NDHWC, // Channel Last Input
+                                   ck_tile::tensor_layout::convolution::NDHWGC, // Channel Last Input with Group
                                    ck_tile::tensor_layout::convolution::GKZYXC, // Weight
                                    ck_tile::tuple<>,
-                                   ck_tile::tensor_layout::convolution::NDHWGK>>; // Channel Last Output
+                                   ck_tile::tensor_layout::convolution::NDHWGK>>; // Channel Last Output with Group
 
 // Type alias for Host Arguments
 using GroupedConvFwdHostArgs = ck_tile::GroupedConvFwdHostArgs;
@@ -151,8 +150,6 @@ struct CKArgs3DChannelLastFwd
         const auto& tensors = data_ctx.tensors;
 
         // Create Host Arguments
-        // Note: We are using void* pointers here as placeholders.
-        // The actual data pointers will be set by the invoker.
         GroupedConvFwdHostArgs host_args(
             conv_param,
             static_cast<const void*>(tensors.in),  // in_ptr
@@ -216,23 +213,20 @@ void PerformanceConfigConv3DChannelLastFwdWmmaops::HeuristicInit(
 bool PerformanceConfigConv3DChannelLastFwdWmmaops::SetNextValue(
     const miopen::conv::ProblemDescription&)
 {
-    // For simplicity, we're not implementing a complex search here
-    // In a real implementation, you would iterate through different CK instances
+    // For simplicity
     return false;
 }
 
 bool PerformanceConfigConv3DChannelLastFwdWmmaops::IsValidValue() const
 {
-    // For simplicity, we assume any configuration is valid
-    // In a real implementation, you would check if the selected instance is valid
+    // For simplicity
     return true;
 }
 
 bool PerformanceConfigConv3DChannelLastFwdWmmaops::IsValid(
     const miopen::conv::ProblemDescription&) const
 {
-    // For simplicity, we assume any configuration is valid
-    // In a real implementation, you would validate the configuration
+    // For simplicity,  assume any configuration is valid
     return true;
 }
 
@@ -242,8 +236,6 @@ bool PerformanceConfigConv3DChannelLastFwdWmmaops::operator==(
     return instance_id == other.instance_id;
 }
 
-
-// Implementation of ConvHipImplicitGemm3DChannelLastFwdWmmaops methods
 
 // Check if this solver is applicable for the given problem
 bool ConvHipImplicitGemm3DChannelLastFwdWmmaops::IsApplicable(
@@ -338,7 +330,6 @@ bool ConvHipImplicitGemm3DChannelLastFwdWmmaops::IsValidPerformanceConfig(
 }
 
 // Search for the best performance configuration
-// For now, we'll just return the default configuration
 PerformanceConfigConv3DChannelLastFwdWmmaops
 ConvHipImplicitGemm3DChannelLastFwdWmmaops::Search(
     const ExecutionContext& ctx,
@@ -360,18 +351,15 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
     CKArgs3DChannelLastFwd<float> ck_args(problem);
 
     // Set up the invoker factory
-    // This is based on the pattern used in implicitgemm_ck_util.hpp and MHA solver
     sol.invoker_factory = [=](const std::vector<Kernel>& kernels) {
         return [=](const Handle& handle, const AnyInvokeParams& primitive_params) {
-            // Cast to the correct invoke parameters type
+
             const auto& data_ctx = primitive_params.CastTo<miopen::conv::DataInvokeParams>();
 
             // Create the host arguments
             auto host_args = ck_args.MakeHostArgs(data_ctx);
             
             // Convert host args to kernel args
-            // DeviceOp3DChannelLastFwd is an alias for GroupedConvFwdKernelArgs with specific traits
-            // The constructor of GroupedConvFwdKernelArgs takes HostArgs
             using DataType = float; // Assuming float for now, this should match the template parameter of DeviceOp3DChannelLastFwd
             using KernelArgsType = DeviceOp3DChannelLastFwd<DataType>;
             KernelArgsType kernel_args(host_args);
@@ -379,31 +367,94 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
             // Create a stream_config object for CK Tile
             ck_tile::stream_config ck_stream_config{handle.GetStream(), handle.IsProfilingEnabled()};
             
-            // Determine grid and block sizes
-            // We need to instantiate the kernel struct to get grid size
-            using KernelType = ck_tile::GroupedConvFwdKernel<
-                typename KernelArgsType::GroupedConvTraitsType,
-                DataType,   // InDataType
-                DataType,   // WeiDataType
-                DataType,   // OutDataType
-                DataType,   // AccDataType
-                DataType,   // COutDataType
-                ck_tile::TileGemmTraits<>, // GemmTraits
-                ck_tile::DefaultStreamKReductionTraits, // StreamKTraits
-                ck_tile::DefaultGroupedConvTilePartitioner, // TilePartitioner
-                ck_tile::DefaultGemmPipeline, // GemmPipeline
-                ck_tile::DefaultGroupedConvEpiloguePipeline // EpiloguePipeline
+            // Define custom tile sizes
+            constexpr ck_tile::index_t M_Tile = 64;
+            constexpr ck_tile::index_t N_Tile = 64;
+            constexpr ck_tile::index_t K_Tile = 64;
+
+            constexpr ck_tile::index_t M_Warp = 2;
+            constexpr ck_tile::index_t N_Warp = 2;
+            constexpr ck_tile::index_t K_Warp = 1;
+
+            constexpr ck_tile::index_t M_Warp_Tile = 16;
+            constexpr ck_tile::index_t N_Warp_Tile = 16;
+            constexpr ck_tile::index_t K_Warp_Tile = 16;
+            
+            // Create the TileGemmShape using the custom tile sizes
+            using CodegenShape = 
+                ck_tile::TileGemmShape<ck_tile::sequence<M_Tile, N_Tile, K_Tile>,
+                                       ck_tile::sequence<M_Warp, N_Warp, K_Warp>,
+                                       ck_tile::sequence<M_Warp_Tile, N_Warp_Tile, K_Warp_Tile>>;
+            
+            // Use the default TilePartitioner from the example
+            using TilePartitioner = ck_tile::GemmTile1DPartitioner<CodegenShape>;
+            
+            // Use the default GemmPipeline from the example
+            // The GemmPipelineProblem uses the CodegenShape and the default GemmTraits from GroupedConvTraits
+            using InDataType = DataType;
+            using WeiDataType = DataType;
+            using AccDataType = DataType;
+            using OutDataType = DataType;
+            using DsDataType = ck_tile::tuple<>;
+            
+            using GroupedConvTraitsType = typename KernelArgsType::GroupedConvTraitsType;
+            using CodegenPipelineProblem = 
+                ck_tile::GemmPipelineProblem<InDataType,
+                                             WeiDataType,
+                                             AccDataType,
+                                             CodegenShape,
+                                             typename GroupedConvTraitsType::GroupedConvImplicitGemmTraits,
+                                             InDataType, // AComputeDataType
+                                             true,       // ADoPad
+                                             8,          // VectorSizeA (example value)
+                                             8>;         // VectorSizeB (example value)
+                                             
+            using CodegenPipeline = ck_tile::GemmPipelineAGmemBGmemCRegV1<CodegenPipelineProblem>;
+            
+            // Use the default Epilogue from the example (you might want to customize this further)
+            constexpr auto memory_operation = ck_tile::memory_operation_enum::set;
+            using ConvEpilogue = ck_tile::CShuffleEpilogue<
+                ck_tile::CShuffleEpilogueProblem<InDataType,
+                                                 WeiDataType,
+                                                 DsDataType,
+                                                 AccDataType,
+                                                 OutDataType,
+                                                 typename GroupedConvTraitsType::ImplicitGemmDsLayout,
+                                                 ck_tile::tensor_layout::gemm::RowMajor, // CLayout
+                                                 ck_tile::element_wise::PassThrough,     // ElementwiseOp
+                                                 CodegenPipelineProblem::kBlockSize,
+                                                 TilePartitioner::MPerBlock,
+                                                 TilePartitioner::NPerBlock,
+                                                 M_Warp,
+                                                 N_Warp,
+                                                 M_Warp_Tile,
+                                                 N_Warp_Tile,
+                                                 K_Warp_Tile,
+                                                 CodegenPipelineProblem::TransposeC,
+                                                 memory_operation,
+                                                 1,  // kBlockPerCu
+                                                 true, // kPadN
+                                                 8>>; // VectorSizeC (example value)
+            
+            // Define the kernel type using the correct name GroupedConvolutionForwardKernel
+            // and our custom components
+            using KernelType = ck_tile::GroupedConvolutionForwardKernel<
+                GroupedConvTraitsType,  // GroupedConvTraitsType
+                TilePartitioner,        // TilePartitioner
+                CodegenPipeline,        // GemmPipeline
+                ConvEpilogue            // EpiloguePipeline
             >;
             
-            dim3 block_dim(KernelType::kBlockSize, 1, 1);
-            dim3 grid_dim = KernelType::GridSize(kernel_args);
+            const dim3 grid_dim = KernelType::GridSize(kernel_args);
+            constexpr dim3 block_dim = KernelType::BlockSize();
             
-            // Create kernel launcher
-            auto kernel_launcher = ck_tile::make_kernel<CK_TILE_MIN_BLOCK_PER_CU>(
+            // Create kernel launcher following CK Tile example pattern
+            constexpr int kBlockPerCu = 1;
+            auto kernel_launcher = ck_tile::make_kernel<block_dim.x, kBlockPerCu>(
                 KernelType{}, 
                 grid_dim, 
                 block_dim, 
-                KernelType::GetSmemSize(), 
+                0,  // lds_byte = 0 as we're getting it from GetSmemSize()
                 kernel_args
             );
             
