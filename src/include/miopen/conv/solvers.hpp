@@ -4540,6 +4540,13 @@ struct PerformanceConfigConv3DChannelLastFwdWmmaops
         : PerformanceConfigConv3DChannelLastFwdWmmaops(0, "")
     {
     }
+    
+    template <class Self, class F>
+    static void Visit(Self&& self, F f)
+    {
+        f(self.instance_id, "instance_id");
+    }
+
     MIOPEN_INTERNALS_EXPORT void HeuristicInit(const miopen::conv::ProblemDescription&);
     MIOPEN_INTERNALS_EXPORT bool SetNextValue(const miopen::conv::ProblemDescription&);
     MIOPEN_INTERNALS_EXPORT bool IsValidValue() const;
