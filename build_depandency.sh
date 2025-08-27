@@ -12,15 +12,15 @@ clean_build_cache() {
     local DEPS_PREFIX="${HOME}/miopen-deps"
     
     # 只清理构建缓存，保留已安装的包
-    rm -rf "${DEPS_PREFIX}/cget/build"
+    rm -rf "${DEPS_PREFIX}"
     rm -rf build
     echo "Build cache cleaned."
 }
-clean_build_cache()
+clean_build_cache
 
 clean_environment() {
     # 清理PATH中的Windows路径（包含驱动器字母和反斜杠的路径）
-    export PATH=$(echo "$PATH" | tr ":;" "\n" | grep -v "^[A-Za-z]:" | grep -v "\\" | grep -v "^c$" | grep -v "^[A-Z]$" | grep -v "^\w:" | grep -v "^$" | tr "\n" ":" | sed "s/:*$//")
+    export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^[A-Za-z]:' | grep -v '\\' | tr '\n' ':' | sed 's/:$//')
     
     # 确保基本Linux路径存在
     export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
@@ -51,15 +51,12 @@ clean_environment() {
         export PATH="/opt/rocm/bin:$PATH"
     fi
     
-    # 移除重复的PATH条目
-    export PATH=$(echo "$PATH" | tr ":" "\n" | awk "!seen[$0]++" | tr "\n" ":" | sed "s/:$//")
-
     echo "Environment cleaned. Current PATH:"
     echo "$PATH" | tr ':' '\n' | head -10
 }
 
 # 调用清理函数
-clean_environment()
+clean_environment
 
 PATH="/tmp/fake_nproc:$PATH"
 
@@ -72,25 +69,3 @@ mkdir -p "${DEPS_PREFIX}"
 echo "Installing dependencies to ${DEPS_PREFIX}..."
 cmake -P install_deps.cmake --prefix "${DEPS_PREFIX}"
 
-# 进入构建目录
-cd build
-
-# 配置 CMake
-echo "Configuring CMake..."
-cmake .. \
-    -DCMAKE_PREFIX_PATH="${DEPS_PREFIX}" \
-    -DCMAKE_INSTALL_PREFIX="${DEPS_PREFIX}" \
-    -DMIOPEN_BACKEND=HIP \
-    -DMIOPEN_USE_COMPOSABLEKERNEL=ON
-
-# 构建项目
-echo "Building MIOpen..."
-make -j8
-
-# 安装项目
-echo "Installing MIOpen..."
-make install
-
-echo "Build completed successfully!"
-echo "Dependencies and MIOpen installed to ${DEPS_PREFIX}"
-echo "To use with PyTorch, set CMAKE_PREFIX_PATH=${DEPS_PREFIX}"
