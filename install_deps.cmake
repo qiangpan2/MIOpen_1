@@ -140,5 +140,5 @@ cget(ignore pcre)
 # cget(install -U -f requirements.txt)
 
 # Install composable_kernel with Ninja generator
-cget(install -U ROCm/composable_kernel@26d33009306b0e77d3f51f071f8367f4c5bdf353 -DCMAKE_BUILD_TYPE=Release -DGPU_TARGETS="gfx1100" -DUSE_OPT_GFX11=ON -DCMAKE_HIP_COMPILER=/opt/rocm/llvm/bin/clang++ -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ -G Ninja
+cget(install -U qiangpan2/composable_kernel@develop -DCMAKE_BUILD_TYPE=Release -DGPU_TARGETS="gfx1100" -DCK_TILE_USE_WMMA -DCMAKE_HIP_COMPILER=/opt/rocm/llvm/bin/clang++ -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ -G Ninja
 )
