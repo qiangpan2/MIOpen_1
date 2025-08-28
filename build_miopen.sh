@@ -9,7 +9,7 @@ cmake -B build \
     -DCMAKE_INSTALL_PREFIX="${DEPS_PREFIX}" \
     -DMIOPEN_BACKEND=HIP \
     -DMIOPEN_USE_COMPOSABLEKERNEL=OFF \
-    -DMIOPEN_USE_CKTILE_COMPOSABLEKERNEL=OFF \
+    -DMIOPEN_USE_CKTILE_COMPOSABLEKERNEL=ON \
     -DCMAKE_HIP_COMPILER=/opt/rocm/llvm/bin/clang++ \
     -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang \
     -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ \

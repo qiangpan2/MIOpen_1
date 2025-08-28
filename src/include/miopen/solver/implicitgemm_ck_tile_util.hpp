@@ -32,8 +32,9 @@
 #include <miopen/buffer_info.hpp>
 #include <miopen/tensor_ops.hpp>
 #include <miopen/miopen_internal.h>
+#include <miopen/hip_build_utils.hpp>
 
-#if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
+#if MIOPEN_BACKEND_HIP && MIOPEN_USE_CKTILE_COMPOSABLEKERNEL
 // Include CK tile headers for convolution operations
 #include <ck_tile/ops/grouped_convolution.hpp>
 #include <ck_tile/ops/elementwise.hpp> // For PassThrough
@@ -41,6 +42,31 @@
 
 namespace miopen {
 namespace solver {
+
+// CK tile utility functions
+namespace ck_tile_utility {
+    static inline bool is_ck_tile_supported_hardware(const Handle& handle)
+    {
+        // CK tile supported hardware list
+        return (StartsWith(handle.GetDeviceName(), "gfx1100") ||
+               StartsWith(handle.GetDeviceName(), "gfx1101") ||
+               StartsWith(handle.GetDeviceName(), "gfx1102") ||
+               StartsWith(handle.GetDeviceName(), "gfx1200") ||
+               StartsWith(handle.GetDeviceName(), "gfx1201"));
+    }
+    
+    static inline bool is_ck_tile_whitelist(const std::string& device_name)
+    {
+        return (StartsWith(device_name, "gfx11") ||
+                StartsWith(device_name, "gfx12"));
+    }
+    
+    static inline bool is_ck_tile_whitelist(const Handle& handle)
+    {
+        return is_ck_tile_whitelist(handle.GetDeviceName());
+    }
+}//namespaceck_tile_utility
+
 namespace conv_ck_tile { 
 
 // Solvers using Channel-Last (NDHWC) data may need to transpose to these layouts.
@@ -52,8 +78,9 @@ using PassThrough = ck_tile::element_wise::PassThrough;
 using StreamConfig = ck_tile::stream_config;
 
 
+
 } // namespace conv_ck_tile
 } // namespace solver
 } // namespace miopen
 
-#endif // MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
+#endif // MIOPEN_BACKEND_HIP && MIOPEN_USE_CKTILE_COMPOSABLEKERNEL

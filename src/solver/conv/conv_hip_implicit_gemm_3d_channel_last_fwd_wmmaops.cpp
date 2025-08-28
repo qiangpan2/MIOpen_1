@@ -32,7 +32,6 @@
 
 // Include Composable Kernel headers for 3D convolution with channel last layout
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_CKTILE_COMPOSABLEKERNEL
-#include <miopen/solver/ck_utility_common.hpp>
 // Include CK tile utility header for 3D convolution
 #include <miopen/solver/implicitgemm_ck_tile_util.hpp>
 // Include specific CK tile headers if needed beyond what's in the utility
@@ -239,7 +238,7 @@ bool ConvHipImplicitGemm3DChannelLastFwdWmmaops::IsApplicable(
     }
 
     // Check if the hardware is supported
-    if(!ck_utility::is_ck_supported_hardware(ctx.GetStream()))
+    if(!ck_tile_utility::is_ck_tile_supported_hardware(ctx.GetStream()))
     {
         return false;
     }
