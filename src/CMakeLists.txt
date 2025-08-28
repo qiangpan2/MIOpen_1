@@ -857,8 +857,11 @@ target_include_directories(MIOpen PUBLIC
 if(MIOPEN_USE_COMPOSABLEKERNEL)
 set(MIOPEN_CK_LINK_FLAGS composable_kernel::device_other_operations composable_kernel::device_gemm_operations composable_kernel::device_conv_operations composable_kernel::device_reduction_operations composable_kernel::device_mha_operations hip::host)
 endif()
+
 if(MIOPEN_USE_CKTILE_COMPOSABLEKERNEL)
-set(MIOPEN_CK_TILE_LINK_FLAGS composable_kernel::ck_tile)
+    if(composable_kernel_ck_tile_FOUND)
+    set(MIOPEN_CK_TILE_LINK_FLAGS ${composable_kernel_ck_tile_INCLUDE_DIRS})
+    endif()
 endif()
 
 if(WIN32)
