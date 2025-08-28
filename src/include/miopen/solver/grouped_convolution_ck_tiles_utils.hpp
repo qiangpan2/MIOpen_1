@@ -3,7 +3,7 @@
 // Copyright (c) 2025, Advanced Micro Devices, Inc. All rights reserved.
 
 #pragma once
-
+#if MIOPEN_BACKEND_HIP && MIOPEN_USE_CKTILE_COMPOSABLEKERNEL
 #include <string>
 
 #include "ck_tile/core.hpp"
@@ -129,3 +129,4 @@ auto create_args(int argc, char* argv[])
 // host API
 float grouped_conv_fwd(const ck_tile::GroupedConvFwdHostArgs& args,
                        const ck_tile::stream_config& s);
+#endif // MIOPEN_BACKEND_HIP && MIOPEN_USE_CKTILE_COMPOSABLEKERNEL

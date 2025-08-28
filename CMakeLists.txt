@@ -328,6 +328,9 @@ add_compile_definitions($<$<COMPILE_LANGUAGE:CXX>:HIP_COMPILER_FLAGS=${HIP_COMPI
 # HIP
 if( MIOPEN_BACKEND STREQUAL "HIP" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN_BACKEND STREQUAL "HIPNOGPU")
     if(MIOPEN_USE_COMPOSABLEKERNEL)
+        find_package(composable_kernel 1.0.0 COMPONENTS device_other_operations device_gemm_operations device_conv_operations device_reduction_operations)
+    endif()
+    if(MIOPEN_USE_CKTILE_COMPOSABLEKERNEL)
         find_package(composable_kernel 1.0.0 COMPONENTS ck_tile)
     endif()
     if( MIOPEN_BACKEND STREQUAL "HIPNOGPU")

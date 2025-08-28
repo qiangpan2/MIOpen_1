@@ -857,6 +857,9 @@ target_include_directories(MIOpen PUBLIC
 if(MIOPEN_USE_COMPOSABLEKERNEL)
 set(MIOPEN_CK_LINK_FLAGS composable_kernel::device_other_operations composable_kernel::device_gemm_operations composable_kernel::device_conv_operations composable_kernel::device_reduction_operations composable_kernel::device_mha_operations hip::host)
 endif()
+if(MIOPEN_USE_CKTILE_COMPOSABLEKERNEL)
+set(MIOPEN_CK_TILE_LINK_FLAGS composable_kernel::ck_tile)
+endif()
 
 if(WIN32)
     # Refer to https://en.cppreference.com/w/cpp/language/types for details.
@@ -866,7 +869,7 @@ endif()
 target_include_directories(MIOpen SYSTEM PUBLIC $<BUILD_INTERFACE:${HALF_INCLUDE_DIR}>)
 # Workaround : change in rocm-cmake was causing linking error so had to add ${CMAKE_DL_LIBS}
 #               We can remove ${CMAKE_DL_LIBS} once root cause is identified.
-target_link_libraries(MIOpen PRIVATE ${CMAKE_DL_LIBS} Threads::Threads BZip2::BZip2 ${MIOPEN_CK_LINK_FLAGS})
+target_link_libraries(MIOpen PRIVATE ${CMAKE_DL_LIBS} Threads::Threads BZip2::BZip2 ${MIOPEN_CK_LINK_FLAGS} ${MIOPEN_CK_TILE_LINK_FLAGS})
 miopen_generate_export_header(MIOpen)
 
 if(WIN32)

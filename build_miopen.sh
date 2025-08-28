@@ -8,15 +8,17 @@ cmake -B build \
     -DCMAKE_PREFIX_PATH="${DEPS_PREFIX}" \
     -DCMAKE_INSTALL_PREFIX="${DEPS_PREFIX}" \
     -DMIOPEN_BACKEND=HIP \
-    -DMIOPEN_USE_COMPOSABLEKERNEL=ON \
+    -DMIOPEN_USE_COMPOSABLEKERNEL=OFF \
+    -DMIOPEN_USE_CKTILE_COMPOSABLEKERNEL=OFF \
     -DCMAKE_HIP_COMPILER=/opt/rocm/llvm/bin/clang++ \
     -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang \
     -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ \
     -DGPU_TARGETS="gfx1100" \
-    -G Ninja
+    -DBUILD_TESTING=OFF \
+    -G Ninja --debug-output
 
 # 构建项目
-cmake --build build -j8
+cmake --build build -j8 > build.log 2>&1
 
 # 安装项目
 echo "Installing MIOpen..."

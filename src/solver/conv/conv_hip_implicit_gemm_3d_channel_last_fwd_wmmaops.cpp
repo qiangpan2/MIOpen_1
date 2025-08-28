@@ -31,7 +31,7 @@
 #include <miopen/solver/problem_description_interpreter.hpp>
 
 // Include Composable Kernel headers for 3D convolution with channel last layout
-#if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
+#if MIOPEN_BACKEND_HIP && MIOPEN_USE_CKTILE_COMPOSABLEKERNEL
 #include <miopen/solver/ck_utility_common.hpp>
 // Include CK tile utility header for 3D convolution
 #include <miopen/solver/implicitgemm_ck_tile_util.hpp>
@@ -47,7 +47,7 @@ namespace conv {
 
 using ProblemDescription = miopen::conv::ProblemDescription;
 
-#if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
+#if MIOPEN_BACKEND_HIP && MIOPEN_USE_CKTILE_COMPOSABLEKERNEL
 
 // Use type aliases from the new CK Tile utility header
 using namespace miopen::solver::conv_ck_tile;
@@ -467,4 +467,4 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
 } // namespace solver
 } // namespace miopen
 
-#endif // MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
+#endif // MIOPEN_BACKEND_HIP && MIOPEN_USE_CKTILE_COMPOSABLEKERNEL
