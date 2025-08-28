@@ -36,11 +36,7 @@
 // Include CK tile utility header for 3D convolution
 #include <miopen/solver/implicitgemm_ck_tile_util.hpp>
 // Include specific CK tile headers if needed beyond what's in the utility
-#include <ck_tile/ops/grouped_convolution.hpp>
-// Include all necessary GEMM components via the main GEMM header
-#include <ck_tile/ops/gemm.hpp>
-// Include Epilogue
-#include <ck_tile/ops/epilogue.hpp>
+#include <miopen/solver/grouped_convolution_ck_tiles_utils.hpp>
 #endif
 
 MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_DEBUG_3D_CONV_IMPLICIT_GEMM_HIP_CHANNEL_LAST_FWD_WMMAOPS)
