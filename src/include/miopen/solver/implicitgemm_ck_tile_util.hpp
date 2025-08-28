@@ -37,21 +37,17 @@
 // Include CK tile headers for convolution operations
 #include <ck_tile/ops/grouped_convolution.hpp>
 #include <ck_tile/ops/elementwise.hpp> // For PassThrough
-#include <ck_tile/ops/common/utils.hpp> // For gemm_prec_str
 #include <ck_tile/host/stream_config.hpp> // For stream_config
-// Include kernel launch functions
-#include <ck_tile/host/kernel_launch.hpp>
 
 namespace miopen {
 namespace solver {
 namespace conv_ck_tile { 
 
-
 // Solvers using Channel-Last (NDHWC) data may need to transpose to these layouts.
 using InLayout    = ck_tile::tensor_layout::convolution::NDHWGC;
 using WeiLayout   = ck_tile::tensor_layout::convolution::GKZYXC;
 using OutLayout   = ck_tile::tensor_layout::convolution::NDHWGK;
-using PassThrough = ck_tile::element_wise::PassThrough; // Fixed namespace
+using PassThrough = ck_tile::element_wise::PassThrough; 
 
 using StreamConfig = ck_tile::stream_config;
 
