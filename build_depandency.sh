@@ -54,3 +54,5 @@ mkdir -p "${DEPS_PREFIX}"
 echo "Installing dependencies to ${DEPS_PREFIX}..."
 cmake -P install_deps.cmake --prefix "${DEPS_PREFIX}"
 
+#for CK build update standalone
+#${HOME}/miopen-deps/bin/cget -p ${HOME}/miopen-deps install -U qiangpan2/composable_kernel@develop -DCMAKE_BUILD_TYPE=Release -DGPU_TARGETS="gfx1100" -DCK_TILE_USE_WMMA=ON -DCMAKE_HIP_COMPILER=/opt/rocm/llvm/bin/clang++ -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ -G Ninja
