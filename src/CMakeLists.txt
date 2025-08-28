@@ -208,19 +208,16 @@ set( MIOpen_Source
     solver/activ/fwd_1.cpp
     solver/adam/adam.cpp
     solver/adam/transformers_adam_w.cpp
-    solver/batchnorm/backward_ck.cpp
     solver/batchnorm/backward_per_activation.cpp
     solver/batchnorm/backward_per_activation_fused.cpp
     solver/batchnorm/backward_spatial_multiple.cpp
     solver/batchnorm/backward_spatial_single.cpp
     solver/batchnorm/forward_inference.cpp
-    solver/batchnorm/forward_inference_ck.cpp
     solver/batchnorm/forward_inference_fused.cpp
     solver/batchnorm/forward_per_activation.cpp
     solver/batchnorm/forward_per_activation_fused.cpp
     solver/batchnorm/forward_spatial_multiple.cpp
     solver/batchnorm/forward_spatial_single.cpp
-    solver/batchnorm/forward_training_ck.cpp
     solver/cat/forward_cat.cpp
     solver/conv/conv_asm_1x1u.cpp
     solver/conv/conv_asm_1x1u_stride2.cpp
@@ -248,35 +245,14 @@ set( MIOpen_Source
     solver/conv/conv_direct_naive_conv_bwd.cpp
     solver/conv/conv_direct_naive_conv_fwd.cpp
     solver/conv/conv_direct_naive_conv_wrw.cpp
-    solver/conv/conv_hip_implicit_gemm_bwd_data_xdlops.cpp
     solver/conv/conv_hip_implicit_gemm_bwd_v1r1.cpp
-    solver/conv/conv_hip_implicit_gemm_bwd_v1r1_xdlops.cpp
     solver/conv/conv_hip_implicit_gemm_bwd_v4r1.cpp
-    solver/conv/conv_hip_implicit_gemm_bwd_v4r1_xdlops.cpp
     solver/conv/conv_hip_implicit_gemm_fwd_v4r1.cpp
     solver/conv/conv_hip_implicit_gemm_fwd_v4r4.cpp
-    solver/conv/conv_hip_implicit_gemm_fwd_v4r4_xdlops.cpp
-    solver/conv/conv_hip_implicit_gemm_fwd_v4r4_xdlops_padded_gemm.cpp
-    solver/conv/conv_hip_implicit_gemm_fwd_v4r5_xdlops.cpp
-    solver/conv/conv_hip_implicit_gemm_fwd_xdlops.cpp
-    solver/conv/conv_hip_implicit_gemm_grouped_fwd_xdlops.cpp
-    solver/conv/conv_hip_implicit_gemm_grouped_bwd_xdlops.cpp
-    solver/conv/conv_hip_implicit_gemm_grouped_wrw_xdlops.cpp
-    solver/conv/conv_hip_implicit_gemm_3d_grouped_fwd_xdlops.cpp
-    solver/conv/conv_hip_implicit_gemm_3d_grouped_wrw_xdlops.cpp
-    solver/conv/conv_hip_implicit_gemm_3d_grouped_bwd_xdlops.cpp
-    solver/conv/conv_hip_implicit_gemm_3d_channel_last_fwd_wmmaops.cpp
-    solver/conv/conv_hip_implicit_gemm_nonxdlops_common.cpp
-    solver/conv/conv_hip_implicit_gemm_wrw_v4r4.cpp
-    solver/conv/conv_hip_implicit_gemm_wrw_v4r4_xdlops.cpp
-    solver/conv/conv_hip_implicit_gemm_wrw_v4r4_xdlops_padded_gemm.cpp
     solver/conv/conv_MP_bidirectional_winograd.cpp
     solver/conv/conv_mlir_igemm_bwd.cpp
-    solver/conv/conv_mlir_igemm_bwd_xdlops.cpp
     solver/conv/conv_mlir_igemm_fwd.cpp
-    solver/conv/conv_mlir_igemm_fwd_xdlops.cpp
     solver/conv/conv_mlir_igemm_wrw.cpp
-    solver/conv/conv_mlir_igemm_wrw_xdlops.cpp
     solver/conv/conv_multipass_wino3x3WrW.cpp
     solver/conv/conv_ocl_dir2D_bwdWrW_1x1.cpp
     solver/conv/conv_ocl_dir2D_bwdWrW_2.cpp
@@ -307,10 +283,6 @@ set( MIOpen_Source
     solver/layernorm/backward_t5layernorm.cpp
     solver/layernorm/forward_addlayernorm.cpp
     solver/layernorm/forward_layernorm.cpp
-    solver/layernorm/forward_layernorm2d_ck.cpp
-    solver/layernorm/forward_layernorm4d_ck.cpp
-    solver/layernorm/forward_t5layernorm.cpp
-    solver/mha/mha_ck_fa_v2_solver_forward.cpp
     solver/mha/mha_solver_backward.cpp
     solver/mha/mha_solver_forward.cpp
     solver/multimarginloss/forward_multimarginloss.cpp
@@ -354,6 +326,35 @@ set( MIOpen_Source
     transformers_adam_w_api.cpp
     seq_tensor.cpp
 )
+
+# Composable Kernel related sources
+if(MIOPEN_USE_COMPOSABLEKERNEL)
+    list(APPEND MIOpen_Source
+        solver/batchnorm/backward_ck.cpp
+        solver/batchnorm/forward_inference_ck.cpp
+        solver/batchnorm/forward_training_ck.cpp
+        solver/conv/conv_hip_implicit_gemm_bwd_data_xdlops.cpp
+        solver/conv/conv_hip_implicit_gemm_bwd_v1r1_xdlops.cpp
+        solver/conv/conv_hip_implicit_gemm_bwd_v4r1_xdlops.cpp
+        solver/conv/conv_hip_implicit_gemm_fwd_v4r4_xdlops.cpp
+        solver/conv/conv_hip_implicit_gemm_fwd_v4r4_xdlops_padded_gemm.cpp
+        solver/conv/conv_hip_implicit_gemm_fwd_v4r5_xdlops.cpp
+        solver/conv/conv_hip_implicit_gemm_fwd_xdlops.cpp
+        solver/conv/conv_hip_implicit_gemm_grouped_fwd_xdlops.cpp
+        solver/conv/conv_hip_implicit_gemm_grouped_bwd_xdlops.cpp
+        solver/conv/conv_hip_implicit_gemm_grouped_wrw_xdlops.cpp
+        solver/conv/conv_hip_implicit_gemm_3d_grouped_fwd_xdlops.cpp
+        solver/conv/conv_hip_implicit_gemm_3d_grouped_wrw_xdlops.cpp
+        solver/conv/conv_hip_implicit_gemm_3d_grouped_bwd_xdlops.cpp
+        solver/conv/conv_hip_implicit_gemm_3d_channel_last_fwd_wmmaops.cpp
+        solver/conv/conv_mlir_igemm_bwd_xdlops.cpp
+        solver/conv/conv_mlir_igemm_fwd_xdlops.cpp
+        solver/conv/conv_mlir_igemm_wrw_xdlops.cpp
+        solver/layernorm/forward_layernorm2d_ck.cpp
+        solver/layernorm/forward_layernorm4d_ck.cpp
+        solver/mha/mha_ck_fa_v2_solver_forward.cpp
+    )
+endif()
 
 if(MIOPEN_ENABLE_AI_KERNEL_TUNING OR MIOPEN_ENABLE_AI_IMMED_MODE_FALLBACK)
     list(APPEND MIOpen_Source conv/heuristics/ai_heuristics.cpp)
