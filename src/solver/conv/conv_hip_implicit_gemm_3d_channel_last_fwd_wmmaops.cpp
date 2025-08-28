@@ -382,32 +382,38 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
             using OutDataType = DataType;
             using DsDataType = ck_tile::tuple<>;
             
-            using GroupedConvTraitsType = typename KernelArgsType::GroupedConvTraitsType;
-            using CodegenPipelineProblem = 
-                ck_tile::GemmPipelineProblem<InDataType,
-                                             WeiDataType,
-                                             AccDataType,
-                                             CodegenShape,
-                                             typename GroupedConvTraitsType::GroupedConvImplicitGemmTraits,
-                                             InDataType, // AComputeDataType
-                                             true,       // ADoPad
-                                             8,          // VectorSizeA (example value)
-                                             8>;         // VectorSizeB (example value)
-                                             
-            using CodegenPipeline = ck_tile::GemmPipelineAGmemBGmemCRegV1<CodegenPipelineProblem>;
+            using Traits = ck_tile::GroupedConvTraits<NumDimSpatial,
+                                                      ck_tile::ConvolutionSpecialization::Default,
+                                                      ck_tile::tensor_layout::convolution::NDHWGC,
+                                                      ck_tile::tensor_layout::convolution::GKZYXC,
+                                                      ck_tile::tuple<>,
+                                                      ck_tile::tensor_layout::convolution::NDHWGK>;
+            
+            // Fix: Use the correct pipeline problem and epilogue types
+            using Problem = ck_tile::GemmPipelineProblem<InDataType,
+                                                         WeiDataType,
+                                                         AccDataType,
+                                                         CodegenShape,
+                                                         Traits,
+                                                         InDataType, // AComputeDataType
+                                                         true,       // ADoPad
+                                                         8,          // VectorSizeA (example value)
+                                                         8>;         // VectorSizeB (example value)
+            
+            using PipelineImpl = ck_tile::GemmPipelineAGmemBGmemCRegV1<Problem>;
             
             // Use the default Epilogue from the example (you might want to customize this further)
             constexpr auto memory_operation = ck_tile::memory_operation_enum::set;
-            using ConvEpilogue = ck_tile::CShuffleEpilogue<
+            using Epilogue = ck_tile::CShuffleEpilogue<
                 ck_tile::CShuffleEpilogueProblem<InDataType,
                                                  WeiDataType,
                                                  DsDataType,
                                                  AccDataType,
                                                  OutDataType,
-                                                 typename GroupedConvTraitsType::ImplicitGemmDsLayout,
+                                                 ck_tile::tuple<>, // ImplicitGemmDsLayout
                                                  ck_tile::tensor_layout::gemm::RowMajor, // CLayout
                                                  ck_tile::element_wise::PassThrough,     // ElementwiseOp
-                                                 CodegenPipelineProblem::kBlockSize,
+                                                 Problem::kBlockSize,
                                                  TilePartitioner::MPerBlock,
                                                  TilePartitioner::NPerBlock,
                                                  M_Warp,
@@ -415,28 +421,27 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
                                                  M_Warp_Tile,
                                                  N_Warp_Tile,
                                                  K_Warp_Tile,
-                                                 CodegenPipelineProblem::TransposeC,
+                                                 Problem::TransposeC,
                                                  memory_operation,
                                                  1,  // kBlockPerCu
                                                  true, // kPadN
                                                  8>>; // VectorSizeC (example value)
             
-            // Define the kernel type using the correct name GroupedConvolutionForwardKernel
-            // and our custom components
-            using KernelType = ck_tile::GroupedConvolutionForwardKernel<
-                GroupedConvTraitsType,  // GroupedConvTraitsType
-                TilePartitioner,        // TilePartitioner
-                CodegenPipeline,        // GemmPipeline
-                ConvEpilogue            // EpiloguePipeline
+            // Define the kernel type using the correct CK tile API
+            using Kernel = ck_tile::GroupedConvolutionForwardKernel<
+                Traits,        // GroupedConvTraits
+                TilePartitioner,  // TilePartitioner
+                PipelineImpl,     // GemmPipeline
+                Epilogue          // EpiloguePipeline
             >;
             
-            const dim3 grid_dim = KernelType::GridSize(kernel_args);
-            constexpr dim3 block_dim = KernelType::BlockSize();
+            const dim3 grid_dim = Kernel::GridSize(kernel_args);
+            constexpr dim3 block_dim = Kernel::BlockSize();
             
             // Create kernel launcher following CK Tile example pattern
             constexpr int kBlockPerCu = 1;
             auto kernel_launcher = ck_tile::make_kernel<block_dim.x, kBlockPerCu>(
-                KernelType{}, 
+                Kernel{}, 
                 grid_dim, 
                 block_dim, 
                 0,  // lds_byte = 0 as we're getting it from GetSmemSize()
