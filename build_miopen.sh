@@ -1,12 +1,13 @@
 #!/bin/bash
 
 DEPS_PREFIX="${HOME}/miopen-deps"
+MIOPEN_PREFIX="${HOME}/miopen-install"
 
 # 配置 CMake with proper GPU target flags
 echo "Configuring CMake..."
 cmake -B build \
     -DCMAKE_PREFIX_PATH="${DEPS_PREFIX}" \
-    -DCMAKE_INSTALL_PREFIX="${DEPS_PREFIX}" \
+    -DCMAKE_INSTALL_PREFIX="${MIOPEN_PREFIX}" \
     -DMIOPEN_BACKEND=HIP \
     -DMIOPEN_USE_COMPOSABLEKERNEL=OFF \
     -DMIOPEN_USE_CKTILE_COMPOSABLEKERNEL=ON \
@@ -25,5 +26,3 @@ echo "Installing MIOpen..."
 cmake --install build
 
 echo "Build completed successfully!"
-echo "Dependencies and MIOpen installed to ${DEPS_PREFIX}"
-echo "To use with PyTorch, set CMAKE_PREFIX_PATH=${DEPS_PREFIX}"
