@@ -23,7 +23,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-
+#include <miopen/config.h>
 #include <miopen/conv/solvers.hpp>
 #include <miopen/env.hpp>
 #include <miopen/generic_search.hpp>

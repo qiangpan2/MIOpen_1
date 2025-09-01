@@ -3,6 +3,7 @@
 // Copyright (c) 2025, Advanced Micro Devices, Inc. All rights reserved.
 
 #pragma once
+#include <miopen/config.h>
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_CKTILE_COMPOSABLEKERNEL
 #include <string>
 

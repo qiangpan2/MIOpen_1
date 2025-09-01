@@ -25,7 +25,7 @@
  *******************************************************************************/
 
 #pragma once
-
+#include <miopen/config.h>
 #include <miopen/conv/data_invoke_params.hpp>
 #include <miopen/conv/wrw_invoke_params.hpp>
 #include <miopen/batched_transpose_sol.hpp>
