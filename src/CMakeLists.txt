@@ -862,6 +862,7 @@ endif()
 if(MIOPEN_USE_CKTILE_COMPOSABLEKERNEL)
     if(composable_kernel_ck_tile_FOUND)
     set(MIOPEN_CK_TILE_LINK_FLAGS ${composable_kernel_ck_tile_INCLUDE_DIRS})
+    target_compile_definitions(MIOpen PRIVATE MIOPEN_USE_CKTILE_COMPOSABLEKERNEL=1)
     endif()
 endif()
 
