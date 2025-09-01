@@ -346,7 +346,6 @@ if(MIOPEN_USE_COMPOSABLEKERNEL)
         solver/conv/conv_hip_implicit_gemm_3d_grouped_fwd_xdlops.cpp
         solver/conv/conv_hip_implicit_gemm_3d_grouped_wrw_xdlops.cpp
         solver/conv/conv_hip_implicit_gemm_3d_grouped_bwd_xdlops.cpp
-        solver/conv/conv_hip_implicit_gemm_3d_channel_last_fwd_wmmaops.cpp
         solver/conv/conv_mlir_igemm_bwd_xdlops.cpp
         solver/conv/conv_mlir_igemm_fwd_xdlops.cpp
         solver/conv/conv_mlir_igemm_wrw_xdlops.cpp
@@ -354,6 +353,13 @@ if(MIOPEN_USE_COMPOSABLEKERNEL)
         solver/layernorm/forward_layernorm4d_ck.cpp
         solver/mha/mha_ck_fa_v2_solver_forward.cpp
     )
+endif()
+
+if(MIOPEN_USE_CKTILE_COMPOSABLEKERNEL)
+ list(APPEND MIOpen_Source
+        solver/conv/conv_hip_implicit_gemm_3d_channel_last_fwd_wmmaops.cpp
+
+    ) 
 endif()
 
 if(MIOPEN_ENABLE_AI_KERNEL_TUNING OR MIOPEN_ENABLE_AI_IMMED_MODE_FALLBACK)
