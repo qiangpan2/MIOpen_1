@@ -373,7 +373,7 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
             using OutDataType = DataType;
             using DsDataType = ck_tile::tuple<>;
             
-            // Use proper layout types from the example (3D spatial)
+            // example use template with this NDimSpatial
             constexpr ck_tile::index_t NDimSpatial = 3;
             constexpr auto ConvSpec = ck_tile::ConvolutionSpecialization::Default;
             using InLayout = ck_tile::tensor_layout::convolution::NDHWGC;
@@ -391,13 +391,16 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
             using GroupedConvTraitsType =
                 ck_tile::GroupedConvTraits<NDimSpatial, ConvSpec, InLayout, WeiLayout, DsLayout, OutLayout>;
             
-            // Try with only 5 parameters first (current API)
             using CodegenPipelineProblem =
                 ck_tile::GemmPipelineProblem<InDataType,
-                                             WeiDataType,
-                                             AccDataType,
-                                             CodegenShape,
-                                             typename GroupedConvTraitsType::GroupedConvImplicitGemmTraits>;
+                                                WeiDataType,
+                                                AccDataType,
+                                                CodegenShape,
+                                                typename GroupedConvTraitsType::GroupedConvImplicitGemmTraits,
+                                                InDataType,
+                                                true,
+                                                VectorSizeA,
+                                                VectorSizeB>;
             
             using CodegenPipeline = ck_tile::GemmPipelineAGmemBGmemCRegV1<CodegenPipelineProblem>;
 
