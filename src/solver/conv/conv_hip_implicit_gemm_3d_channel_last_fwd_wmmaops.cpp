@@ -351,7 +351,7 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
             // Create a stream_config object for CK Tile
             ck_tile::stream_config ck_stream_config{handle.GetStream(), handle.IsProfilingEnabled()};
             
-            // Define custom tile sizes
+            // Define custom tile sizes (matching the example)
             constexpr ck_tile::index_t M_Tile = 64;
             constexpr ck_tile::index_t N_Tile = 64;
             constexpr ck_tile::index_t K_Tile = 64;
@@ -373,78 +373,81 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
             // Use the default TilePartitioner from the example
             using TilePartitioner = ck_tile::GemmTile1DPartitioner<CodegenShape>;
             
-            // Use the default GemmPipeline from the example
-            // The GemmPipelineProblem uses the CodegenShape and the default GemmTraits from GroupedConvTraits
+            // Define types matching the example
             using InDataType = DataType;
             using WeiDataType = DataType;
             using AccDataType = DataType;
             using OutDataType = DataType;
             using DsDataType = ck_tile::tuple<>;
             
-            using Traits = ck_tile::GroupedConvTraits<NumDimSpatial,
-                                                      ck_tile::ConvolutionSpecialization::Default,
-                                                      ck_tile::tensor_layout::convolution::NDHWGC,
-                                                      ck_tile::tensor_layout::convolution::GKZYXC,
-                                                      ck_tile::tuple<>,
-                                                      ck_tile::tensor_layout::convolution::NDHWGK>;
+            // Use proper layout types from the example (3D spatial)
+            constexpr ck_tile::index_t NDimSpatial = 3;
+            constexpr auto ConvSpec = ck_tile::ConvolutionSpecialization::Default;
+            using InLayout = ck_tile::tensor_layout::convolution::NDHWGC;
+            using WeiLayout = ck_tile::tensor_layout::convolution::GKZYXC;
+            using OutLayout = ck_tile::tensor_layout::convolution::NDHWGK;
+            using DsLayout = ck_tile::tuple<>;
             
-            // Fix: Use the correct pipeline problem and epilogue types
-            using Problem = ck_tile::GemmPipelineProblem<InDataType,
-                                                         WeiDataType,
-                                                         AccDataType,
-                                                         CodegenShape,
-                                                         Traits,
-                                                         InDataType, // AComputeDataType
-                                                         true,       // ADoPad
-                                                         8,          // VectorSizeA (example value)
-                                                         8>;         // VectorSizeB (example value)
+            using GroupedConvTraitsType = 
+                ck_tile::GroupedConvTraits<NDimSpatial, ConvSpec, InLayout, WeiLayout, DsLayout, OutLayout>;
             
-            using PipelineImpl = ck_tile::GemmPipelineAGmemBGmemCRegV1<Problem>;
+            using CodegenPipelineProblem = 
+                ck_tile::GemmPipelineProblem<InDataType,
+                                            WeiDataType,
+                                            AccDataType,
+                                            CodegenShape,
+                                            typename GroupedConvTraitsType::GroupedConvImplicitGemmTraits>;
             
-            // Use the default Epilogue from the example (you might want to customize this further)
-            constexpr auto memory_operation = ck_tile::memory_operation_enum::set;
-            using Epilogue = ck_tile::CShuffleEpilogue<
+            using CodegenPipeline = ck_tile::GemmPipelineAGmemBGmemCRegV1<CodegenPipelineProblem>;
+            
+            // Define epilogue matching the example
+            using ConvEpilogue = ck_tile::CShuffleEpilogue<
                 ck_tile::CShuffleEpilogueProblem<InDataType,
-                                                 WeiDataType,
-                                                 DsDataType,
-                                                 AccDataType,
-                                                 OutDataType,
-                                                 ck_tile::tuple<>, // ImplicitGemmDsLayout
-                                                 ck_tile::tensor_layout::gemm::RowMajor, // CLayout
-                                                 ck_tile::element_wise::PassThrough,     // ElementwiseOp
-                                                 Problem::kBlockSize,
-                                                 TilePartitioner::MPerBlock,
-                                                 TilePartitioner::NPerBlock,
-                                                 M_Warp,
-                                                 N_Warp,
-                                                 M_Warp_Tile,
-                                                 N_Warp_Tile,
-                                                 K_Warp_Tile,
-                                                 Problem::TransposeC,
-                                                 memory_operation,
-                                                 1,  // kBlockPerCu
-                                                 true, // kPadN
-                                                 8>>; // VectorSizeC (example value)
+                                                WeiDataType,
+                                                DsDataType,
+                                                AccDataType,
+                                                OutDataType,
+                                                typename GroupedConvTraitsType::ImplicitGemmDsLayout,
+                                                ck_tile::tensor_layout::gemm::RowMajor,
+                                                ck_tile::element_wise::PassThrough,
+                                                TilePartitioner::MPerBlock,
+                                                TilePartitioner::NPerBlock,
+                                                M_Warp,
+                                                N_Warp,
+                                                M_Warp_Tile,
+                                                N_Warp_Tile,
+                                                K_Warp_Tile,
+                                                CodegenPipelineProblem::TransposeC,
+                                                ck_tile::memory_operation_enum::set,
+                                                1,
+                                                true,
+                                                8>>; // VectorSizeC
             
             // Define the kernel type using the correct CK tile API
-            using Kernel = ck_tile::GroupedConvolutionForwardKernel<
-                Traits,        // GroupedConvTraits
-                TilePartitioner,  // TilePartitioner
-                PipelineImpl,     // GemmPipeline
-                Epilogue          // EpiloguePipeline
-            >;
+            using Kernel = ck_tile::GroupedConvolutionForwardKernel<GroupedConvTraitsType,
+                                                                   TilePartitioner,
+                                                                   CodegenPipeline,
+                                                                   ConvEpilogue>;
             
-            const dim3 grid_dim = Kernel::GridSize(kernel_args);
-            constexpr dim3 block_dim = Kernel::BlockSize();
+            // Create kernel arguments properly
+            auto kargs = Kernel::MakeKernelArgs(kernel_args);
             
-            // Create kernel launcher following CK Tile example pattern
+            const dim3 grids = Kernel::GridSize(kargs);
+            const dim3 blocks = Kernel::BlockSize();
+            
+            // Check if arguments are supported
+            if(!Kernel::IsSupportedArgument(kargs))
+            {
+                throw std::runtime_error("Wrong! Arguments not supported! Skipping conv!\n");
+            }
+            
             constexpr int kBlockPerCu = 1;
-            auto kernel_launcher = ck_tile::make_kernel<block_dim.x, kBlockPerCu>(
+            auto kernel_launcher = ck_tile::make_kernel<kBlockPerCu>(
                 Kernel{}, 
-                grid_dim, 
-                block_dim, 
+                grids, 
+                blocks, 
                 0,  // lds_byte = 0 as we're getting it from GetSmemSize()
-                kernel_args
+                kargs
             );
             
             // Launch kernel and measure time
