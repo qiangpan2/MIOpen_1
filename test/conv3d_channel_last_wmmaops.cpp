@@ -106,9 +106,12 @@ void test_solver_applicability()
     // Wrap the C API descriptor in C++ class
     auto conv_desc = miopen::deref(conv_desc_raw);
     
+    // Create output tensor descriptor
+    auto output_tensor_desc = conv_desc.GetForwardOutputTensor(input_tensor.desc, weight_tensor.desc);
+    
     // Create problem description with NDHWC layout (channel-last)
     auto problem = miopen::conv::ProblemDescription{
-        input_tensor.desc, weight_tensor.desc, conv_desc, miopen::conv::Direction::Forward};
+        input_tensor.desc, weight_tensor.desc, output_tensor_desc, conv_desc, miopen::conv::Direction::Forward};
     
     // Manually set layouts to NDHWC (channel-last)
     problem.SetLayouts(miopenTensorNDHWC, miopenTensorNDHWC, miopenTensorNDHWC);
@@ -206,9 +209,12 @@ void test_grouped_convolution()
     // Wrap the C API descriptor in C++ class
     auto conv_desc = miopen::deref(conv_desc_raw);
     
+    // Create output tensor descriptor
+    auto output_tensor_desc = conv_desc.GetForwardOutputTensor(input_tensor.desc, weight_tensor.desc);
+    
     // Create problem description with NDHWC layout (channel-last)
     auto problem = miopen::conv::ProblemDescription{
-        input_tensor.desc, weight_tensor.desc, conv_desc, miopen::conv::Direction::Forward};
+        input_tensor.desc, weight_tensor.desc, output_tensor_desc, conv_desc, miopen::conv::Direction::Forward};
     
     // Manually set layouts to NDHWC (channel-last)
     problem.SetLayouts(miopenTensorNDHWC, miopenTensorNDHWC, miopenTensorNDHWC);
