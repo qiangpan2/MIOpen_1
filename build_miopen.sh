@@ -15,7 +15,7 @@ cmake -B build \
     -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang \
     -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ \
     -DGPU_TARGETS="gfx1100" \
-    -DBUILD_TESTING=OFF \
+    -DBUILD_TESTING=ON \
     -G Ninja --debug-output
 
 # 构建项目
