@@ -14,12 +14,13 @@ cmake -B build \
     -DCMAKE_HIP_COMPILER=/opt/rocm/llvm/bin/clang++ \
     -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang \
     -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ \
-    -DGPU_TARGETS="gfx1100" \
     -DBUILD_TESTING=ON \
     -G Ninja --debug-output
 
 # 构建项目
 cmake --build build -j8 > build.log 2>&1
+
+./build/test/test_conv3d_channel_last_wmmaops --half
 
 # 安装项目
 echo "Installing MIOpen..."
