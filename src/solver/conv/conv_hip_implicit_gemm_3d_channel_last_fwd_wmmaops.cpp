@@ -343,7 +343,7 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
             // Create the host arguments
             auto host_args = ck_args.MakeHostArgs(data_ctx);
             
-            using DataType = float;
+            using DataType = ck_tile::half_t;
 
             // Create a stream_config object for CK Tile
             ck_tile::stream_config ck_stream_config{handle.GetStream(), handle.IsProfilingEnabled()};
@@ -369,7 +369,7 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
             // Define types matching the example
             using InDataType = DataType;
             using WeiDataType = DataType;
-            using AccDataType = DataType;
+            using AccDataType = float;
             using OutDataType = DataType;
             using DsDataType = ck_tile::tuple<>;
             
