@@ -89,9 +89,13 @@ void test_solver_applicability()
     ctx.use_hip_kernels = true;
     
     // Create a 3D convolution problem with channel-last layout and FP16 data type
-    // Note: We start with NCDHW format and then set layout to NDHWC (channel-last)
-    auto input_tensor = tensor<half>{1, 32, 8, 8, 8};   // NCDHW format initially
-    auto weight_tensor = tensor<half>{64, 32, 3, 3, 3}; // KCDHW format initially
+    // Create tensor descriptors with NDHWC layout directly
+    std::vector<std::size_t> input_lens = {1, 32, 8, 8, 8};
+    std::vector<std::size_t> weight_lens = {64, 32, 3, 3, 3};
+    
+    // Create tensor descriptors with NDHWC layout
+    auto input_tensor_desc = miopen::TensorDescriptor(miopenHalf, miopenTensorNDHWC, input_lens);
+    auto weight_tensor_desc = miopen::TensorDescriptor(miopenHalf, miopenTensorNDHWC, weight_lens);
     
     // Create convolution descriptor using C API and then wrap it
     miopenConvolutionDescriptor_t conv_desc_raw;
@@ -107,17 +111,11 @@ void test_solver_applicability()
     auto conv_desc = miopen::deref(conv_desc_raw);
     
     // Create output tensor descriptor
-    auto output_tensor_desc = conv_desc.GetForwardOutputTensor(input_tensor.desc, weight_tensor.desc);
+    auto output_tensor_desc = conv_desc.GetForwardOutputTensor(input_tensor_desc, weight_tensor_desc);
     
-    // Create problem description with NDHWC layout (channel-last)
+    // Create problem description with NDHWC layout (channel-last) and FP16 data type
     auto problem = miopen::conv::ProblemDescription{
-        input_tensor.desc, weight_tensor.desc, output_tensor_desc, conv_desc, miopen::conv::Direction::Forward};
-    
-    // Manually set layouts to NDHWC (channel-last)
-    problem.SetLayouts(miopenTensorNDHWC, miopenTensorNDHWC, miopenTensorNDHWC);
-    
-    // Ensure data type is FP16
-    problem.SetDataType(miopenHalf);
+        input_tensor_desc, weight_tensor_desc, output_tensor_desc, conv_desc, miopen::conv::Direction::Forward};
     
     // Create solver instance
     ConvHipImplicitGemm3DChannelLastFwdWmmaops solver;
@@ -190,8 +188,13 @@ void test_grouped_convolution()
     const int height = 8;
     const int width = 8;
     
-    auto input_tensor = tensor<half>{batch, input_channels_per_group * groups, depth, height, width};
-    auto weight_tensor = tensor<half>{output_channels_per_group * groups, input_channels_per_group, 3, 3, 3};
+    // Create tensor descriptors with NDHWC layout directly
+    std::vector<std::size_t> input_lens = {batch, input_channels_per_group * groups, depth, height, width};
+    std::vector<std::size_t> weight_lens = {output_channels_per_group * groups, input_channels_per_group, 3, 3, 3};
+    
+    // Create tensor descriptors with NDHWC layout
+    auto input_tensor_desc = miopen::TensorDescriptor(miopenHalf, miopenTensorNDHWC, input_lens);
+    auto weight_tensor_desc = miopen::TensorDescriptor(miopenHalf, miopenTensorNDHWC, weight_lens);
     
     // Create convolution descriptor using C API and then wrap it
     miopenConvolutionDescriptor_t conv_desc_raw;
@@ -210,17 +213,11 @@ void test_grouped_convolution()
     auto conv_desc = miopen::deref(conv_desc_raw);
     
     // Create output tensor descriptor
-    auto output_tensor_desc = conv_desc.GetForwardOutputTensor(input_tensor.desc, weight_tensor.desc);
+    auto output_tensor_desc = conv_desc.GetForwardOutputTensor(input_tensor_desc, weight_tensor_desc);
     
-    // Create problem description with NDHWC layout (channel-last)
+    // Create problem description with NDHWC layout (channel-last) and FP16 data type
     auto problem = miopen::conv::ProblemDescription{
-        input_tensor.desc, weight_tensor.desc, output_tensor_desc, conv_desc, miopen::conv::Direction::Forward};
-    
-    // Manually set layouts to NDHWC (channel-last)
-    problem.SetLayouts(miopenTensorNDHWC, miopenTensorNDHWC, miopenTensorNDHWC);
-    
-    // Ensure data type is FP16
-    problem.SetDataType(miopenHalf);
+        input_tensor_desc, weight_tensor_desc, output_tensor_desc, conv_desc, miopen::conv::Direction::Forward};
     
     // Create solver instance
     ConvHipImplicitGemm3DChannelLastFwdWmmaops solver;
