@@ -836,7 +836,7 @@ add_custom_test(smoke_solver_ConvHipImplicitGemmFwdXdlops GFX900_DISABLED GFX906
 )
 
 # Custom test for ConvHipImplicitGemm3DChannelLastFwdWmmaops solver
-add_custom_test(smoke_solver_ConvHipImplicitGemm3DChannelLastFwdWmmaops GFX94X_ENABLED SKIP_UNLESS_COMPOSABLEKERNEL HALF_ENABLED
+add_custom_test(smoke_solver_ConvHipImplicitGemm3DChannelLastFwdWmmaops GFX110X_ENABLED SKIP_UNLESS_CKTILE_COMPOSABLEKERNEL HALF_ENABLED
     ENVIRONMENT MIOPEN_FIND_ENFORCE=SEARCH_DB_UPDATE MIOPEN_DEBUG_TUNING_ITERATIONS_MAX=5 MIOPEN_FIND_MODE=normal MIOPEN_DEBUG_FIND_ONLY_SOLVER=ConvHipImplicitGemm3DChannelLastFwdWmmaops
     COMMAND $<TARGET_FILE:test_conv3d_channel_last_wmmaops> ${MIOPEN_TEST_FLOAT_ARG} --verbose
 )
