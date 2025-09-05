@@ -92,15 +92,23 @@ void test_solver_applicability()
     // Note: We start with NCDHW format and then set layout to NDHWC (channel-last)
     auto input_tensor = tensor<half>{1, 32, 8, 8, 8};   // NCDHW format initially
     auto weight_tensor = tensor<half>{64, 32, 3, 3, 3}; // KCDHW format initially
-    auto conv_desc = miopen::ConvolutionDescriptor{};
     
-    // Set convolution parameters
-    conv_desc.SetSpatialDim(3);
-    conv_desc.SetConvolutionDescriptorAttr<3>({1, 1, 1}, {1, 1, 1}, {1, 1, 1});
+    // Create convolution descriptor using C API and then wrap it
+    miopenConvolutionDescriptor_t conv_desc_raw;
+    miopenCreateConvolutionDescriptor(&conv_desc_raw);
+    
+    // Set 3D convolution parameters
+    int padA[3] = {1, 1, 1};
+    int strideA[3] = {1, 1, 1};
+    int dilationA[3] = {1, 1, 1};
+    miopenInitConvolutionNdDescriptor(conv_desc_raw, 3, padA, strideA, dilationA, miopenConvolution);
+    
+    // Wrap the C API descriptor in C++ class
+    auto conv_desc = miopen::deref(conv_desc_raw);
     
     // Create problem description with NDHWC layout (channel-last)
-    auto problem = conv::ProblemDescription{
-        input_tensor.desc, weight_tensor.desc, conv_desc, conv::Direction::Forward};
+    auto problem = miopen::conv::ProblemDescription{
+        input_tensor.desc, weight_tensor.desc, conv_desc, miopen::conv::Direction::Forward};
     
     // Manually set layouts to NDHWC (channel-last)
     problem.SetLayouts(miopenTensorNDHWC, miopenTensorNDHWC, miopenTensorNDHWC);
@@ -181,16 +189,26 @@ void test_grouped_convolution()
     
     auto input_tensor = tensor<half>{batch, input_channels_per_group * groups, depth, height, width};
     auto weight_tensor = tensor<half>{output_channels_per_group * groups, input_channels_per_group, 3, 3, 3};
-    auto conv_desc = miopen::ConvolutionDescriptor{};
     
-    // Set convolution parameters
-    conv_desc.SetSpatialDim(3);
-    conv_desc.SetConvolutionDescriptorAttr<3>({1, 1, 1}, {1, 1, 1}, {1, 1, 1});
-    conv_desc.group_count = groups;
+    // Create convolution descriptor using C API and then wrap it
+    miopenConvolutionDescriptor_t conv_desc_raw;
+    miopenCreateConvolutionDescriptor(&conv_desc_raw);
+    
+    // Set 3D convolution parameters
+    int padA[3] = {1, 1, 1};
+    int strideA[3] = {1, 1, 1};
+    int dilationA[3] = {1, 1, 1};
+    miopenInitConvolutionNdDescriptor(conv_desc_raw, 3, padA, strideA, dilationA, miopenConvolution);
+    
+    // Set group count
+    miopenSetConvolutionGroupCount(conv_desc_raw, groups);
+    
+    // Wrap the C API descriptor in C++ class
+    auto conv_desc = miopen::deref(conv_desc_raw);
     
     // Create problem description with NDHWC layout (channel-last)
-    auto problem = conv::ProblemDescription{
-        input_tensor.desc, weight_tensor.desc, conv_desc, conv::Direction::Forward};
+    auto problem = miopen::conv::ProblemDescription{
+        input_tensor.desc, weight_tensor.desc, conv_desc, miopen::conv::Direction::Forward};
     
     // Manually set layouts to NDHWC (channel-last)
     problem.SetLayouts(miopenTensorNDHWC, miopenTensorNDHWC, miopenTensorNDHWC);
