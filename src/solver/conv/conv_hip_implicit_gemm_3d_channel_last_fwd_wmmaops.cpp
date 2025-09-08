@@ -463,6 +463,14 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
     return sol;
 }
 
+// Get the workspace size required for this solver
+size_t ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetWorkspaceSize(
+    const ExecutionContext& ctx, const ProblemDescription& problem) const
+{
+    // For now, return 0 as we're not using workspace 
+    return 0;
+}
+
 } // namespace conv
 } // namespace solver
 } // namespace miopen
