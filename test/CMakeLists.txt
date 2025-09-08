@@ -579,6 +579,9 @@ function(add_custom_test NAME)
 
     bool_not_f(${PARSE_SKIP_UNLESS_COMPOSABLEKERNEL} is_composablekernel_check)
     bool_or_f(${is_composablekernel_check} ${MIOPEN_TEST_COMPOSABLEKERNEL} is_composablekernel_check)
+    
+    bool_not_f(${PARSE_SKIP_UNLESS_CKTILE_COMPOSABLEKERNEL} is_cktile_composablekernel_check)
+    bool_or_f(${is_cktile_composablekernel_check} ${MIOPEN_USE_CKTILE_COMPOSABLEKERNEL} is_cktile_composablekernel_check)
 
     set(HIP_TEST_DEFAULT TRUE)
     option_support_check(${PARSE_HIP_ENABLED} ${PARSE_HIP_DISABLED} ${HIP_TEST_DEFAULT} is_hip_check)
