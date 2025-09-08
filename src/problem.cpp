@@ -613,12 +613,17 @@ Problem::FindSolutionsImpl(const Handle& handle,
 
     const auto algo = AlgorithmName{"Mha"};
 
+#if MIOPEN_USE_COMPOSABLEKERNEL
     static solver::mha::MhaCKFlashAttentionV2Forward mhaCKFAForwardSolver;
+#endif
     static solver::mha::MhaForward mhaForwardSolver;
     static solver::mha::MhaBackward mhaBackwardSolver;
 
     std::vector<solver::mha::MhaSolver*> solvers = {
-        &mhaCKFAForwardSolver, &mhaForwardSolver, &mhaBackwardSolver};
+#if MIOPEN_USE_COMPOSABLEKERNEL
+        &mhaCKFAForwardSolver,
+#endif
+        &mhaForwardSolver, &mhaBackwardSolver};
 
     for(auto solver : solvers)
     {

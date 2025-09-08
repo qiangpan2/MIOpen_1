@@ -404,13 +404,16 @@ void Solution::RunImpl(const Handle& handle,
         auto solverId = GetSolver();
         solver::mha::MhaForward mhaForward;
         solver::mha::MhaBackward mhaBackward;
+#if MIOPEN_USE_COMPOSABLEKERNEL
         solver::mha::MhaCKFlashAttentionV2Forward ckMhaForward;
 
         if(solverId == ckMhaForward.SolverDbId())
         {
             return ckMhaForward.GetSolution(ctx, problem_description);
         }
-        else if(solverId == mhaForward.SolverDbId())
+        else
+#endif
+        if(solverId == mhaForward.SolverDbId())
         {
             return mhaForward.GetSolution(ctx, problem_description);
         }
