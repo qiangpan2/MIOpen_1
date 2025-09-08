@@ -623,6 +623,12 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
                        ++id,
                        conv::ConvHipImplicitGemm3DGroupFwdXdlops{},
                        miopenConvolutionAlgoImplicitGEMM);
+#if MIOPEN_BACKEND_HIP && MIOPEN_USE_CKTILE_COMPOSABLEKERNEL
+    RegisterWithSolver(registry,
+                       ++id,
+                       conv::ConvHipImplicitGemm3DChannelLastFwdWmmaops{},
+                       miopenConvolutionAlgoImplicitGEMM);
+#endif
     RegisterWithSolver(
         registry, ++id, conv::ConvWinoFuryRxS<2, 3>{}, miopenConvolutionAlgoWinograd);
     RegisterWithSolver(registry,
