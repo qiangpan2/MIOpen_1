@@ -136,11 +136,13 @@ static auto GetWindogradSolvers()
         miopen::solver::conv::ConvMPBidirectWinograd<4, 3>,
         miopen::solver::conv::ConvMPBidirectWinograd<5, 3>,
         miopen::solver::conv::ConvMPBidirectWinograd<6, 3>,
+#if MIOPEN_USE_COMPOSABLEKERNEL
         miopen::solver::conv::ConvMPBidirectWinograd_xdlops<2, 3>,
         miopen::solver::conv::ConvMPBidirectWinograd_xdlops<3, 3>,
         miopen::solver::conv::ConvMPBidirectWinograd_xdlops<4, 3>,
         miopen::solver::conv::ConvMPBidirectWinograd_xdlops<5, 3>,
         miopen::solver::conv::ConvMPBidirectWinograd_xdlops<6, 3>,
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
         miopen::solver::conv::ConvWinoFuryRxS<2, 3>>{};
 }
 
