@@ -738,6 +738,7 @@ template struct ConvMPBidirectWinograd<4, 3>;
 template struct ConvMPBidirectWinograd<5, 3>;
 template struct ConvMPBidirectWinograd<6, 3>;
 
+#if MIOPEN_USE_COMPOSABLEKERNEL
 // ExecutionContext and ProblemDescription transformation
 // for winograd buffers calculation using xdlops_convolution
 template <int WinoDataH, int WinoFilterH, int WinoDataW, int WinoFilterW>
@@ -961,6 +962,7 @@ template struct ConvMPBidirectWinograd_xdlops<3, 3>;
 template struct ConvMPBidirectWinograd_xdlops<4, 3>;
 template struct ConvMPBidirectWinograd_xdlops<5, 3>;
 template struct ConvMPBidirectWinograd_xdlops<6, 3>;
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
 
 } // namespace conv
 } // namespace solver
