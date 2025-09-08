@@ -249,6 +249,7 @@ set( MIOpen_Source
     solver/conv/conv_hip_implicit_gemm_bwd_v4r1.cpp
     solver/conv/conv_hip_implicit_gemm_fwd_v4r1.cpp
     solver/conv/conv_hip_implicit_gemm_fwd_v4r4.cpp
+    solver/conv/conv_hip_implicit_gemm_wrw_v4r4.cpp
     solver/conv/conv_MP_bidirectional_winograd.cpp
     solver/conv/conv_mlir_igemm_bwd.cpp
     solver/conv/conv_mlir_igemm_fwd.cpp
