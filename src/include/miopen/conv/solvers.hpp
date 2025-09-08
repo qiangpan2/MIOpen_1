@@ -4524,6 +4524,40 @@ private:
     bool CheckIsSupportCKArgs(const miopen::conv::ProblemDescription&) const;
 };
 
+struct ConvHipImplicitGemm3DGroupFwdXdlops final
+    : ConvTunableSolver<PerformanceConfigHipImplicitGemm3DGroupFwdXdlops>
+{
+    const std::string& SolverDbId() const override
+    {
+        return GetSolverDbId<ConvHipImplicitGemm3DGroupFwdXdlops>();
+    }
+
+    MIOPEN_INTERNALS_EXPORT PerformanceConfigHipImplicitGemm3DGroupFwdXdlops
+    GetDefaultPerformanceConfig(const ExecutionContext&,
+                                const miopen::conv::ProblemDescription&) const override;
+    MIOPEN_INTERNALS_EXPORT bool IsValidPerformanceConfig(
+        const ExecutionContext&,
+        const miopen::conv::ProblemDescription&,
+        const PerformanceConfigHipImplicitGemm3DGroupFwdXdlops&) const override;
+    MIOPEN_INTERNALS_EXPORT PerformanceConfigHipImplicitGemm3DGroupFwdXdlops
+    Search(const ExecutionContext&,
+           const miopen::conv::ProblemDescription&,
+           const AnyInvokeParams& invoke_ctx) const override;
+    MIOPEN_INTERNALS_EXPORT bool
+    IsApplicable(const ExecutionContext&, const miopen::conv::ProblemDescription&) const override;
+    bool IsDynamic() const override { return true; }
+    MIOPEN_INTERNALS_EXPORT ConvSolution
+    GetSolution(const ExecutionContext&,
+                const miopen::conv::ProblemDescription&,
+                const PerformanceConfigHipImplicitGemm3DGroupFwdXdlops&) const override;
+    /// \ref igemm_get_wti_magic_number
+    float GetWti(const ExecutionContext&, const miopen::conv::ProblemDescription&) const override
+    {
+        return 0.02f;
+    };
+};
+
+
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_CKTILE_COMPOSABLEKERNEL
 struct PerformanceConfigConv3DChannelLastFwdWmmaops
     : PerfConfigBase<PerformanceConfigConv3DChannelLastFwdWmmaops>
@@ -4558,39 +4592,6 @@ struct PerformanceConfigConv3DChannelLastFwdWmmaops
     MIOPEN_INTERNALS_EXPORT bool IsValid(const miopen::conv::ProblemDescription&) const;
     MIOPEN_INTERNALS_EXPORT bool
     operator==(const PerformanceConfigConv3DChannelLastFwdWmmaops& other) const;
-};
-
-struct ConvHipImplicitGemm3DGroupFwdXdlops final
-    : ConvTunableSolver<PerformanceConfigHipImplicitGemm3DGroupFwdXdlops>
-{
-    const std::string& SolverDbId() const override
-    {
-        return GetSolverDbId<ConvHipImplicitGemm3DGroupFwdXdlops>();
-    }
-
-    MIOPEN_INTERNALS_EXPORT PerformanceConfigHipImplicitGemm3DGroupFwdXdlops
-    GetDefaultPerformanceConfig(const ExecutionContext&,
-                                const miopen::conv::ProblemDescription&) const override;
-    MIOPEN_INTERNALS_EXPORT bool IsValidPerformanceConfig(
-        const ExecutionContext&,
-        const miopen::conv::ProblemDescription&,
-        const PerformanceConfigHipImplicitGemm3DGroupFwdXdlops&) const override;
-    MIOPEN_INTERNALS_EXPORT PerformanceConfigHipImplicitGemm3DGroupFwdXdlops
-    Search(const ExecutionContext&,
-           const miopen::conv::ProblemDescription&,
-           const AnyInvokeParams& invoke_ctx) const override;
-    MIOPEN_INTERNALS_EXPORT bool
-    IsApplicable(const ExecutionContext&, const miopen::conv::ProblemDescription&) const override;
-    bool IsDynamic() const override { return true; }
-    MIOPEN_INTERNALS_EXPORT ConvSolution
-    GetSolution(const ExecutionContext&,
-                const miopen::conv::ProblemDescription&,
-                const PerformanceConfigHipImplicitGemm3DGroupFwdXdlops&) const override;
-    /// \ref igemm_get_wti_magic_number
-    float GetWti(const ExecutionContext&, const miopen::conv::ProblemDescription&) const override
-    {
-        return 0.02f;
-    };
 };
 
 struct ConvHipImplicitGemm3DChannelLastFwdWmmaops final
