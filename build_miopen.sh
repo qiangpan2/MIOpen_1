@@ -20,7 +20,8 @@ cmake -B build \
 # 构建项目
 cmake --build build -j8 > build.log 2>&1
 
-./build/test/test_conv3d_channel_last_wmmaops --half
+LD_LIBRARY_PATH=/workspace/repo/MIOpen_1/build/lib:$LD_LIBRARY_PATH
+./build/bin/test_conv3d_channel_last_wmmaops 
 
 # 安装项目
 echo "Installing MIOpen..."
