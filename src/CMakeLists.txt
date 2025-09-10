@@ -234,9 +234,7 @@ set( MIOpen_Source
     solver/conv/conv_asm_implicit_gemm_gtc_fwd_nhwc.cpp
     solver/conv/conv_asm_implicit_gemm_gtc_fwd_nchwc.cpp
     solver/conv/conv_asm_implicit_gemm_gtc_perf_config.cpp
-    solver/conv/conv_asm_implicit_gemm_gtc_wrw_nhwc.cpp
     solver/conv/conv_asm_implicit_gemm_v4r1_dynamic.cpp
-    solver/conv/conv_asm_implicit_gemm_wrw_gtc_dynamic_xdlops.cpp
     solver/conv/conv_asm_implicit_gemm_wrw_v4r1_dynamic.cpp
     solver/conv/conv_bin_wino3x3U.cpp
     solver/conv/conv_bin_winoRxS.cpp
@@ -350,6 +348,8 @@ if(MIOPEN_USE_COMPOSABLEKERNEL)
         solver/conv/conv_mlir_igemm_bwd_xdlops.cpp
         solver/conv/conv_mlir_igemm_fwd_xdlops.cpp
         solver/conv/conv_mlir_igemm_wrw_xdlops.cpp
+        solver/conv/conv_asm_implicit_gemm_gtc_wrw_nhwc.cpp
+        solver/conv/conv_asm_implicit_gemm_wrw_gtc_dynamic_xdlops.cpp
         solver/layernorm/forward_layernorm2d_ck.cpp
         solver/layernorm/forward_layernorm4d_ck.cpp
         solver/mha/mha_ck_fa_v2_solver_forward.cpp
