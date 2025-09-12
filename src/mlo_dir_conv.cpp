@@ -89,26 +89,28 @@ static auto GetDirectSolvers()
 static auto GetImplicitGemmSolvers()
 {
     return miopen::solver::SolverContainer<
+#if MIOPEN_USE_COMPOSABLEKERNEL
         miopen::solver::conv::ConvHipImplicitGemmForwardV4R4Xdlops,
         miopen::solver::conv::ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm,
         miopen::solver::conv::ConvHipImplicitGemmBwdDataV4R1Xdlops,
         miopen::solver::conv::ConvHipImplicitGemmBwdDataV1R1Xdlops,
+        miopen::solver::conv::ConvMlirIgemmFwdXdlops,
+        miopen::solver::conv::ConvMlirIgemmBwdXdlops,
+        miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicFwdXdlops,
+        miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicBwdXdlops,
+        miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicFwdXdlopsNHWC,
+        miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicBwdXdlopsNHWC,
+        miopen::solver::conv::ConvCkIgemmFwdV6r1DlopsNchw,
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
         miopen::solver::conv::ConvHipImplicitGemmV4R1Fwd,
         miopen::solver::conv::ConvHipImplicitGemmV4R4Fwd,
-        miopen::solver::conv::ConvMlirIgemmFwdXdlops,
         miopen::solver::conv::ConvMlirIgemmFwd,
-        miopen::solver::conv::ConvMlirIgemmBwdXdlops,
         miopen::solver::conv::ConvMlirIgemmBwd,
         miopen::solver::conv::ConvHipImplicitGemmBwdDataV1R1,
         miopen::solver::conv::ConvHipImplicitGemmBwdDataV4R1,
         miopen::solver::conv::ConvAsmImplicitGemmV4R1DynamicFwd_1x1,
         miopen::solver::conv::ConvAsmImplicitGemmV4R1DynamicFwd,
         miopen::solver::conv::ConvAsmImplicitGemmV4R1DynamicBwd,
-        miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicFwdXdlops,
-        miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicBwdXdlops,
-        miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicFwdXdlopsNHWC,
-        miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicBwdXdlopsNHWC,
-        miopen::solver::conv::ConvCkIgemmFwdV6r1DlopsNchw,
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
         miopen::solver::conv::ConvHipImplicitGemmForwardV4R5Xdlops,
         miopen::solver::conv::ConvHipImplicitGemmFwdXdlops,
@@ -149,14 +151,16 @@ static auto GetWindogradSolvers()
 static auto GetImplicitGemmWrWSolvers()
 {
     return miopen::solver::SolverContainer<
+#if MIOPEN_USE_COMPOSABLEKERNEL
         miopen::solver::conv::ConvHipImplicitGemmWrwV4R4Xdlops,
         miopen::solver::conv::ConvHipImplicitGemmWrwV4R4Xdlops_Padded_Gemm,
+        miopen::solver::conv::ConvMlirIgemmWrWXdlops,
+        miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicWrwXdlops,
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
         miopen::solver::conv::ConvHipImplicitGemmV4R1WrW,
         miopen::solver::conv::ConvHipImplicitGemmV4R4WrW,
         miopen::solver::conv::ConvAsmImplicitGemmV4R1DynamicWrw,
-        miopen::solver::conv::ConvMlirIgemmWrWXdlops,
         miopen::solver::conv::ConvMlirIgemmWrW,
-        miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicWrwXdlops,
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
         miopen::solver::conv::ConvHipImplicitGemmGroupWrwXdlops,
         miopen::solver::conv::ConvHipImplicitGemm3DGroupWrwXdlops,

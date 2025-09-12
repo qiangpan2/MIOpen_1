@@ -739,6 +739,9 @@ struct PerformanceImplicitGemmBwdDataV4R1 : PerfConfigBase<PerformanceImplicitGe
     MIOPEN_INTERNALS_EXPORT bool SetNextValue(const miopen::conv::ProblemDescription&);
 };
 
+};
+
+#if MIOPEN_USE_COMPOSABLEKERNEL
 struct PerformanceImplicitGemmBwdDataV4R1Xdlops
     : PerfConfigBase<PerformanceImplicitGemmBwdDataV4R1Xdlops>
 {
@@ -756,19 +759,15 @@ struct PerformanceImplicitGemmBwdDataV4R1Xdlops
     bool GemmBThreadCopyMoreGemmKPack;
 
     bool use_spare_set;
+
     MIOPEN_INTERNALS_EXPORT
     PerformanceImplicitGemmBwdDataV4R1Xdlops(int, int, int, int, int, int, bool, bool, bool);
-
     MIOPEN_INTERNALS_EXPORT PerformanceImplicitGemmBwdDataV4R1Xdlops();
     MIOPEN_INTERNALS_EXPORT PerformanceImplicitGemmBwdDataV4R1Xdlops(bool spare);
-    PerformanceImplicitGemmBwdDataV4R1Xdlops(
-        int a, int b, int c, int d, int e, int f, bool g, bool h)
+    PerformanceImplicitGemmBwdDataV4R1Xdlops(int a, int b, int c, int d, int e, int f, bool g, bool h)
         : PerformanceImplicitGemmBwdDataV4R1Xdlops(a, b, c, d, e, f, g, h, false)
     {
     }
-
-    MIOPEN_INTERNALS_EXPORT bool
-    operator==(const PerformanceImplicitGemmBwdDataV4R1Xdlops& other) const;
 
     template <class Self, class F>
     static void Visit(Self&& self, F f)
@@ -783,24 +782,30 @@ struct PerformanceImplicitGemmBwdDataV4R1Xdlops
         f(self.GemmBThreadCopyMoreGemmKPack, "GemmBThreadCopyMoreGemmKPack");
     }
 
-    MIOPEN_INTERNALS_EXPORT std::tuple<int, bool>
-    CalculateGridSize(const miopen::conv::ProblemDescription&) const;
-    MIOPEN_INTERNALS_EXPORT std::tuple<std::size_t, bool>
-    CalculateLdsNumberOfByte(const miopen::conv::ProblemDescription&) const;
-    MIOPEN_INTERNALS_EXPORT std::tuple<int, int, int, int, int, bool>
-    CalculateGemmABlockCopyPerformanceParameters(const miopen::conv::ProblemDescription&) const;
-    MIOPEN_INTERNALS_EXPORT std::tuple<int, int, int, int, int, bool>
-    CalculateGemmBBlockCopyPerformanceParameters(const miopen::conv::ProblemDescription&) const;
+    MIOPEN_INTERNALS_EXPORT bool
+    operator==(const PerformanceImplicitGemmBwdDataV4R1Xdlops& other) const;
+
+    MIOPEN_INTERNALS_EXPORT void HeuristicInit(const ExecutionContext&,
+                                               const miopen::conv::ProblemDescription&);
+    MIOPEN_INTERNALS_EXPORT bool SetNextValue(const miopen::conv::ProblemDescription&);
     MIOPEN_INTERNALS_EXPORT bool IsValidValue() const;
     MIOPEN_INTERNALS_EXPORT bool IsValid(const ExecutionContext&,
                                          const miopen::conv::ProblemDescription&) const;
     MIOPEN_INTERNALS_EXPORT bool IsReallyValid(const miopen::conv::ProblemDescription&) const;
     MIOPEN_INTERNALS_EXPORT bool
     IsFastToBeUsedForTuning(const ExecutionContext&, const miopen::conv::ProblemDescription&) const;
-    MIOPEN_INTERNALS_EXPORT void HeuristicInit(const ExecutionContext&,
-                                               const miopen::conv::ProblemDescription&);
-    MIOPEN_INTERNALS_EXPORT bool SetNextValue(const miopen::conv::ProblemDescription&);
+
+    MIOPEN_INTERNALS_EXPORT std::tuple<int, bool> CalculateBlockSize() const;
+    MIOPEN_INTERNALS_EXPORT std::tuple<int, bool>
+    CalculateGridSize(const miopen::conv::ProblemDescription&) const;
+    MIOPEN_INTERNALS_EXPORT std::tuple<int, int, int, int, int, bool>
+    CalculateGemmABlockCopyPerformanceParameters(const miopen::conv::ProblemDescription&) const;
+    MIOPEN_INTERNALS_EXPORT std::tuple<int, int, int, int, int, bool>
+    CalculateGemmBBlockCopyPerformanceParameters(const miopen::conv::ProblemDescription&) const;
+    MIOPEN_INTERNALS_EXPORT std::tuple<std::size_t, bool>
+    CalculateLdsNumberOfByte(const miopen::conv::ProblemDescription&) const;
 };
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
 
 struct ConvHipImplicitGemmV4R1Fwd final : ConvTunableSolver<PerformanceImplicitGemmV4R1>
 {
@@ -929,6 +934,7 @@ struct ConvMlirIgemmFwd final : ConvTunableSolver<PerformanceConvMlirIgemm>
                 const PerformanceConvMlirIgemm&) const override;
 };
 
+#if MIOPEN_USE_COMPOSABLEKERNEL
 struct PerformanceConvMlirIgemmXdlops : PerfConfigBase<PerformanceConvMlirIgemmXdlops>
 {
     int GemmMPerBlock; // 2^n[32..128]
@@ -985,6 +991,9 @@ private:
     void SetMlirHeuristicInitRequest();
 };
 
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
+
+#if MIOPEN_USE_COMPOSABLEKERNEL
 struct ConvMlirIgemmFwdXdlops final : ConvTunableSolver<PerformanceConvMlirIgemmXdlops>
 {
     const std::string& SolverDbId() const override
@@ -1009,6 +1018,8 @@ struct ConvMlirIgemmFwdXdlops final : ConvTunableSolver<PerformanceConvMlirIgemm
                 const miopen::conv::ProblemDescription&,
                 const PerformanceConvMlirIgemmXdlops&) const override;
 };
+
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
 
 struct ConvHipImplicitGemmV4R4WrW final : ConvTunableSolver<PerformanceImplicitGemmV4R4WrW>
 {
@@ -1062,6 +1073,7 @@ struct ConvMlirIgemmWrW final : ConvTunableSolver<PerformanceConvMlirIgemm>
                 const PerformanceConvMlirIgemm&) const override;
 };
 
+#if MIOPEN_USE_COMPOSABLEKERNEL
 struct ConvMlirIgemmWrWXdlops final : ConvTunableSolver<PerformanceConvMlirIgemmXdlops>
 {
     const std::string& SolverDbId() const override
@@ -1090,6 +1102,9 @@ struct ConvMlirIgemmWrWXdlops final : ConvTunableSolver<PerformanceConvMlirIgemm
                 const PerformanceConvMlirIgemmXdlops&) const override;
 };
 
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
+
+#if MIOPEN_USE_COMPOSABLEKERNEL
 struct PerformanceImplicitGemmForwardV4R4Xdlops
     : PerfConfigBase<PerformanceImplicitGemmForwardV4R4Xdlops>
 {
@@ -1103,10 +1118,16 @@ struct PerformanceImplicitGemmForwardV4R4Xdlops
     bool GemmBThreadCopyMoreGemmKPack;
     int GemmBThreadDataPerRead_GemmN;
 
+    bool use_spare_set;
+
     MIOPEN_INTERNALS_EXPORT
     PerformanceImplicitGemmForwardV4R4Xdlops(int, int, int, int, int, int, bool, bool, int);
     MIOPEN_INTERNALS_EXPORT PerformanceImplicitGemmForwardV4R4Xdlops();
-    PerformanceImplicitGemmForwardV4R4Xdlops(bool) : PerformanceImplicitGemmForwardV4R4Xdlops() {}
+    MIOPEN_INTERNALS_EXPORT PerformanceImplicitGemmForwardV4R4Xdlops(bool spare);
+    PerformanceImplicitGemmForwardV4R4Xdlops(int a, int b, int c, int d, int e, int f, bool g, bool h, int i)
+        : PerformanceImplicitGemmForwardV4R4Xdlops(a, b, c, d, e, f, g, h, i, false)
+    {
+    }
 
     template <class Self, class F>
     static void Visit(Self&& self, F f)
@@ -1145,6 +1166,7 @@ struct PerformanceImplicitGemmForwardV4R4Xdlops
     MIOPEN_INTERNALS_EXPORT std::tuple<std::size_t, bool>
     CalculateLdsNumberOfByte(const miopen::conv::ProblemDescription&) const;
 };
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
 
 #if MIOPEN_USE_COMPOSABLEKERNEL
 struct PerformanceImplicitGemmForwardV4R5Xdlops
@@ -1212,6 +1234,9 @@ struct PerformanceImplicitGemmForwardV4R5Xdlops
 };
 #endif
 
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
+
+#if MIOPEN_USE_COMPOSABLEKERNEL
 struct PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm
     : PerfConfigBase<PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm>
 {
@@ -1329,6 +1354,7 @@ struct PerformanceImplicitGemmBwdV1R1Xdlops : PerfConfigBase<PerformanceImplicit
     MIOPEN_INTERNALS_EXPORT std::tuple<std::size_t, bool>
     CalculateLdsNumberOfByte(const miopen::conv::ProblemDescription&) const;
 };
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
 
 struct ConvHipImplicitGemmForwardV4R4Xdlops final
     : ConvTunableSolver<PerformanceImplicitGemmForwardV4R4Xdlops>
@@ -1421,7 +1447,7 @@ struct ConvHipImplicitGemmForwardV4R5Xdlops final
            const miopen::conv::ProblemDescription&,
            const AnyInvokeParams& invoke_ctx) const override;
 };
-#endif
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
 
 struct ConvHipImplicitGemmV4R1WrW final : ConvTunableSolver<PerformanceImplicitGemmV4R1>
 {
@@ -1504,6 +1530,7 @@ struct ConvMlirIgemmBwd final : ConvTunableSolver<PerformanceConvMlirIgemm>
                 const PerformanceConvMlirIgemm&) const override;
 };
 
+#if MIOPEN_USE_COMPOSABLEKERNEL
 struct ConvMlirIgemmBwdXdlops final : ConvTunableSolver<PerformanceConvMlirIgemmXdlops>
 {
     const std::string& SolverDbId() const override
@@ -1528,6 +1555,8 @@ struct ConvMlirIgemmBwdXdlops final : ConvTunableSolver<PerformanceConvMlirIgemm
                 const miopen::conv::ProblemDescription&,
                 const PerformanceConvMlirIgemmXdlops&) const override;
 };
+
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
 
 struct ConvHipImplicitGemmBwdDataV4R1 final : ConvTunableSolver<PerformanceImplicitGemmBwdDataV4R1>
 {
@@ -1561,6 +1590,7 @@ private:
     friend struct PerformanceImplicitGemmBwdDataV4R1;
 };
 
+#if MIOPEN_USE_COMPOSABLEKERNEL
 struct ConvHipImplicitGemmBwdDataV4R1Xdlops final
     : ConvTunableSolver<PerformanceImplicitGemmBwdDataV4R1Xdlops>
 {
@@ -1594,6 +1624,9 @@ private:
     friend struct PerformanceImplicitGemmBwdDataV4R1Xdlops;
 };
 
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
+
+#if MIOPEN_USE_COMPOSABLEKERNEL
 struct ConvHipImplicitGemmBwdDataV1R1Xdlops final
     : ConvTunableSolver<PerformanceImplicitGemmBwdV1R1Xdlops>
 {
@@ -1628,6 +1661,8 @@ private:
 
     friend struct PerformanceImplicitGemmBwdV1R1Xdlops;
 };
+
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
 
 struct ConvAsmImplicitGemmV4R1DynamicFwd final : ConvSolver
 {
@@ -2642,6 +2677,7 @@ struct PerformanceImplicitGemmWrwV4R4Xdlops : PerfConfigBase<PerformanceImplicit
     CalculateLdsNumberOfByte(const miopen::conv::ProblemDescription&) const;
 };
 
+#if MIOPEN_USE_COMPOSABLEKERNEL
 struct ConvHipImplicitGemmWrwV4R4Xdlops final
     : ConvTunableSolver<PerformanceImplicitGemmWrwV4R4Xdlops>
 {
@@ -2671,6 +2707,9 @@ struct ConvHipImplicitGemmWrwV4R4Xdlops final
            const AnyInvokeParams& invoke_ctx) const override;
 };
 
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
+
+#if MIOPEN_USE_COMPOSABLEKERNEL
 struct PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm
     : PerfConfigBase<PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm>
 {
@@ -2737,7 +2776,9 @@ struct PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm
     MIOPEN_INTERNALS_EXPORT std::tuple<std::size_t, bool>
     CalculateLdsNumberOfByte(const miopen::conv::ProblemDescription&) const;
 };
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
 
+#if MIOPEN_USE_COMPOSABLEKERNEL
 struct ConvHipImplicitGemmWrwV4R4Xdlops_Padded_Gemm final
     : ConvTunableSolver<PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm>
 {
@@ -2767,6 +2808,8 @@ struct ConvHipImplicitGemmWrwV4R4Xdlops_Padded_Gemm final
            const miopen::conv::ProblemDescription&,
            const AnyInvokeParams& invoke_ctx) const override;
 };
+
+#endif // MIOPEN_USE_COMPOSABLEKERNEL
 
 struct PerformanceConvCkIgemmFwdV6r1DlopsNchw
     : PerfConfigBase<PerformanceConvCkIgemmFwdV6r1DlopsNchw>
