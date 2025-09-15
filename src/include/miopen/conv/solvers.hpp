@@ -4555,6 +4555,14 @@ struct ConvHipImplicitGemm3DGroupFwdXdlops final
     {
         return 0.02f;
     };
+
+    MIOPEN_INTERNALS_EXPORT size_t GetWorkspaceSize(
+        const ExecutionContext&, const miopen::conv::ProblemDescription&) const override;
+    bool MayNeedWorkspace() const override { return true; }
+
+private:
+    template <typename DataType>
+    bool CheckCKApplicability(const miopen::conv::ProblemDescription&) const;
 };
 
 

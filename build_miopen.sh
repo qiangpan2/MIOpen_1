@@ -6,7 +6,7 @@ MIOPEN_PREFIX="${HOME}/miopen-install"
 # 配置 CMake with proper GPU target flags
 echo "Configuring CMake..."
 cmake -B build \
-    -DCMAKE_PREFIX_PATH="${DEPS_PREFIX}" \
+    -DCMAKE_PREFIX_PATH="/opt/rocm-6.4.2;${DEPS_PREFIX}" \
     -DCMAKE_INSTALL_PREFIX="${MIOPEN_PREFIX}" \
     -DMIOPEN_BACKEND=HIP \
     -DMIOPEN_USE_COMPOSABLEKERNEL=ON \
@@ -15,7 +15,7 @@ cmake -B build \
     -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang \
     -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ \
     -DBUILD_TESTING=ON \
-    -G Ninja --debug-output
+    -G Ninja --debug-output > cmake_config.log 2>&1
 
 # 构建项目
 cmake --build build -j8 > build.log 2>&1
