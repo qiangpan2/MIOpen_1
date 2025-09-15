@@ -1146,7 +1146,6 @@ struct PerformanceImplicitGemmForwardV4R4Xdlops
     CalculateLdsNumberOfByte(const miopen::conv::ProblemDescription&) const;
 };
 
-#if MIOPEN_USE_COMPOSABLEKERNEL
 struct PerformanceImplicitGemmForwardV4R5Xdlops
     : PerfConfigBase<PerformanceImplicitGemmForwardV4R5Xdlops>
 {
@@ -1210,7 +1209,6 @@ struct PerformanceImplicitGemmForwardV4R5Xdlops
     MIOPEN_INTERNALS_EXPORT std::tuple<std::size_t, bool>
     CalculateLdsNumberOfByte(const miopen::conv::ProblemDescription&) const;
 };
-#endif
 
 struct PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm
     : PerfConfigBase<PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm>
@@ -1395,7 +1393,6 @@ private:
     friend struct PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm;
 };
 
-#if MIOPEN_USE_COMPOSABLEKERNEL
 struct ConvHipImplicitGemmForwardV4R5Xdlops final
     : ConvTunableSolver<PerformanceImplicitGemmForwardV4R5Xdlops>
 {
@@ -1421,7 +1418,6 @@ struct ConvHipImplicitGemmForwardV4R5Xdlops final
            const miopen::conv::ProblemDescription&,
            const AnyInvokeParams& invoke_ctx) const override;
 };
-#endif
 
 struct ConvHipImplicitGemmV4R1WrW final : ConvTunableSolver<PerformanceImplicitGemmV4R1>
 {
@@ -1984,7 +1980,6 @@ extern template struct ConvMPBidirectWinograd<6, 3>;
 #pragma clang diagnostic pop
 #endif
 
-#if MIOPEN_USE_COMPOSABLEKERNEL
 template <int WinoDataH, int WinoFilterH, int WinoDataW = WinoDataH, int WinoFilterW = WinoFilterH>
 struct ConvMPBidirectWinograd_xdlops final
     : ConvTunableSolver<PerformanceImplicitGemmForwardV4R4Xdlops>
@@ -2079,21 +2074,18 @@ private:
 
     bool IsThisSolverDynamic() const { return true; }
 };
-#endif // MIOPEN_USE_COMPOSABLEKERNEL
 
 // To suppress misleading clang warnings
 #if defined(__clang__) && defined(CONV_MP_BIDIRECTIONAL_WINOGRAD_CPP)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wweak-template-vtables"
 #endif
-#if MIOPEN_USE_COMPOSABLEKERNEL
+
 extern template struct ConvMPBidirectWinograd_xdlops<2, 3>;
 extern template struct ConvMPBidirectWinograd_xdlops<3, 3>;
 extern template struct ConvMPBidirectWinograd_xdlops<4, 3>;
 extern template struct ConvMPBidirectWinograd_xdlops<5, 3>;
 extern template struct ConvMPBidirectWinograd_xdlops<6, 3>;
-#endif // MIOPEN_USE_COMPOSABLEKERNEL
- 
 
 #if defined(__clang__) && defined(CONV_MP_BIDIRECTIONAL_WINOGRAD_CPP)
 #pragma clang diagnostic pop

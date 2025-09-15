@@ -413,7 +413,6 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
     RegisterWithSolver(
         registry, ++id, conv::ConvHipImplicitGemmBwdDataV4R1{}, miopenConvolutionAlgoImplicitGEMM);
 
-#if MIOPEN_USE_COMPOSABLEKERNEL
     RegisterWithSolver(registry,
                        ++id,
                        conv::ConvHipImplicitGemmBwdDataV1R1Xdlops{},
@@ -426,7 +425,6 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
                        ++id,
                        conv::ConvHipImplicitGemmBwdDataV4R1Xdlops{},
                        miopenConvolutionAlgoImplicitGEMM);
-#endif
 
     RegisterWithSolver(
         registry, ++id, conv::ConvHipImplicitGemmV4R4WrW{}, miopenConvolutionAlgoImplicitGEMM);
@@ -441,12 +439,10 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
                        conv::ConvAsmImplicitGemmV4R1DynamicFwd_1x1{},
                        miopenConvolutionAlgoImplicitGEMM);
 
-#if MIOPEN_USE_COMPOSABLEKERNEL
     RegisterWithSolver(registry,
                        ++id,
                        conv::ConvHipImplicitGemmForwardV4R4Xdlops{},
                        miopenConvolutionAlgoImplicitGEMM);
-#endif
 
     RegisterWithSolver(registry,
                        ++id,
@@ -473,19 +469,16 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
                        ++id,
                        conv::ConvAsmImplicitGemmGTCDynamicWrwXdlops{},
                        miopenConvolutionAlgoImplicitGEMM);
-#if MIOPEN_USE_COMPOSABLEKERNEL
     RegisterWithSolver(registry,
                        ++id,
                        conv::ConvHipImplicitGemmWrwV4R4Xdlops{},
                        miopenConvolutionAlgoImplicitGEMM);
-#endif
 
     RegisterWithSolver(registry,
                        ++id,
                        conv::ConvAsmImplicitGemmGTCDynamicFwdXdlops{},
                        miopenConvolutionAlgoImplicitGEMM);
 
-#if MIOPEN_USE_COMPOSABLEKERNEL
     RegisterWithSolver(
         registry, ++id, conv::ConvMPBidirectWinograd_xdlops<2, 3>{}, miopenConvolutionAlgoWinograd);
     RegisterWithSolver(
@@ -496,9 +489,7 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
         registry, ++id, conv::ConvMPBidirectWinograd_xdlops<5, 3>{}, miopenConvolutionAlgoWinograd);
     RegisterWithSolver(
         registry, ++id, conv::ConvMPBidirectWinograd_xdlops<6, 3>{}, miopenConvolutionAlgoWinograd);
-#endif
 
-#if MIOPEN_USE_COMPOSABLEKERNEL
     RegisterWithSolver(registry,
                        ++id,
                        conv::ConvHipImplicitGemmForwardV4R5Xdlops{},
@@ -508,18 +499,15 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
                        ++id,
                        conv::ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm{},
                        miopenConvolutionAlgoImplicitGEMM);
-#endif
 
     RegisterWithSolver(registry,
                        ++id,
                        conv::ConvAsmImplicitGemmGTCDynamicBwdXdlops{},
                        miopenConvolutionAlgoImplicitGEMM);
-#if MIOPEN_USE_COMPOSABLEKERNEL
     RegisterWithSolver(registry,
                        ++id,
                        conv::ConvHipImplicitGemmWrwV4R4Xdlops_Padded_Gemm{},
                        miopenConvolutionAlgoImplicitGEMM);
-#endif
     RegisterWithSolver(
         registry, ++id, conv::ConvBinWinogradRxSf2x3g1{}, miopenConvolutionAlgoWinograd);
 
@@ -547,14 +535,12 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
     RegisterWithSolver(registry, ++id, conv::GemmWrw1x1_stride1{}, miopenConvolutionAlgoGEMM);
     RegisterWithSolver(registry, ++id, conv::GemmWrwUniversal{}, miopenConvolutionAlgoGEMM);
 
-#if MIOPEN_USE_COMPOSABLEKERNEL
     RegisterWithSolver(
         registry, ++id, conv::ConvMlirIgemmFwdXdlops{}, miopenConvolutionAlgoImplicitGEMM);
     RegisterWithSolver(
         registry, ++id, conv::ConvMlirIgemmBwdXdlops{}, miopenConvolutionAlgoImplicitGEMM);
     RegisterWithSolver(
         registry, ++id, conv::ConvMlirIgemmWrWXdlops{}, miopenConvolutionAlgoImplicitGEMM);
-#endif
 
     Register(registry, ++id, Primitive::Activation, activ::ActivFwdSolver0{}.SolverDbId());
 
@@ -606,12 +592,10 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
                        ++id,
                        conv::ConvAsmImplicitGemmGTCDynamicFwdDlopsNCHWC{},
                        miopenConvolutionAlgoImplicitGEMM);
-#if MIOPEN_USE_COMPOSABLEKERNEL
     RegisterWithSolver(
         registry, ++id, conv::ConvHipImplicitGemmFwdXdlops{}, miopenConvolutionAlgoImplicitGEMM);
     RegisterWithSolver(
         registry, ++id, conv::ConvHipImplicitGemmBwdXdlops{}, miopenConvolutionAlgoImplicitGEMM);
-#endif
     Register(registry,
              ++id,
              Primitive::Fusion,
@@ -631,7 +615,6 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
              fusion::ConvCKIgemmFwdBiasActivFused{}.SolverDbId(),
              miopenConvolutionAlgoImplicitGEMM);
     Register(registry, ++id, Primitive::Pooling, pooling::PoolingForwardNaive{}.SolverDbId());
-#if MIOPEN_USE_COMPOSABLEKERNEL
     RegisterWithSolver(registry,
                        ++id,
                        conv::ConvHipImplicitGemmGroupFwdXdlops{},
@@ -640,16 +623,8 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
                        ++id,
                        conv::ConvHipImplicitGemm3DGroupFwdXdlops{},
                        miopenConvolutionAlgoImplicitGEMM);
-#endif
-#if MIOPEN_BACKEND_HIP && MIOPEN_USE_CKTILE_COMPOSABLEKERNEL
-    RegisterWithSolver(registry,
-                       ++id,
-                       conv::ConvHipImplicitGemm3DChannelLastFwdWmmaops{},
-                       miopenConvolutionAlgoImplicitGEMM);
-#endif
     RegisterWithSolver(
         registry, ++id, conv::ConvWinoFuryRxS<2, 3>{}, miopenConvolutionAlgoWinograd);
-#if MIOPEN_USE_COMPOSABLEKERNEL
     RegisterWithSolver(registry,
                        ++id,
                        conv::ConvHipImplicitGemm3DGroupWrwXdlops{},
@@ -658,8 +633,6 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
                        ++id,
                        conv::ConvHipImplicitGemm3DGroupBwdXdlops{},
                        miopenConvolutionAlgoImplicitGEMM);
-#endif
-#if MIOPEN_USE_COMPOSABLEKERNEL
     RegisterWithSolver<batchnorm::BnCKFwdInference>(registry, ++id, Primitive::Batchnorm);
     RegisterWithSolver<batchnorm::BnCKBwdBackward>(registry, ++id, Primitive::Batchnorm);
     RegisterWithSolver<batchnorm::BnCKFwdTraining>(registry, ++id, Primitive::Batchnorm);
@@ -667,10 +640,7 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
         registry, ++id, Primitive::Normalization, layernorm::Layernorm2DCKForward{}.SolverDbId());
     Register(
         registry, ++id, Primitive::Normalization, layernorm::Layernorm4DCKForward{}.SolverDbId());
-#else
-    Register(
-        registry, ++id, Primitive::Normalization, layernorm::LayernormForward{}.SolverDbId());
-#endif
+    Register(registry, ++id, Primitive::Normalization, layernorm::LayernormForward{}.SolverDbId());
     Register(registry, ++id, Primitive::Reduce, reduce::SumForward{}.SolverDbId());
     ++id;
     ++id;
@@ -683,7 +653,6 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
     Register(registry, ++id, Primitive::Reduce, reduce::ArgmaxForward{}.SolverDbId());
     Register(registry, ++id, Primitive::Normalization, groupnorm::GroupNormForward{}.SolverDbId());
 
-#if MIOPEN_USE_COMPOSABLEKERNEL
     RegisterWithSolver(registry,
                        ++id,
                        conv::ConvHipImplicitGemmGroupBwdXdlops{},
@@ -692,7 +661,6 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
                        ++id,
                        conv::ConvHipImplicitGemmGroupWrwXdlops{},
                        miopenConvolutionAlgoImplicitGEMM);
-#endif
 
     Register(registry, ++id, Primitive::Softmax, softmax::Softmax{}.SolverDbId());
     Register(registry, ++id, Primitive::Softmax, softmax::AttnSoftmax{}.SolverDbId());
@@ -738,9 +706,7 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
              Primitive::MultiMarginLoss,
              multimarginloss::MultiMarginLossForward{}.SolverDbId());
 
-#if MIOPEN_USE_COMPOSABLEKERNEL
     Register(registry, ++id, Primitive::Mha, mha::MhaCKFlashAttentionV2Forward{}.SolverDbId());
-#endif
     // IMPORTANT: New solvers should be added to the end of the function, and don't leave a white
     // space between this comment and the newly registered solver(s)!
 }
