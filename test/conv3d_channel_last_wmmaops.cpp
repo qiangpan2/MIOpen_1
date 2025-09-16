@@ -123,12 +123,27 @@ void test_solver_applicability()
     // Test if the solver is applicable
     bool is_applicable = solver.IsApplicable(ctx, problem);
     
-    // Print test info
+    // Print detailed diagnostics
     printf("Testing ConvHipImplicitGemm3DChannelLastFwdWmmaops solver applicability:\n");
     printf("  Problem: 3D Convolution with NDHWC layout, FP16 data type\n");
     printf("  Input shape: N=1, C=16, D=5, H=104, W=60\n");
     printf("  Weight shape: K=16, C=16, Z=1, Y=1, X=1\n");
+    printf("  Is 3D: %s\n", problem.Is3d() ? "YES" : "NO");
+    printf("  Is Forward: %s\n", problem.IsDirectionForward() ? "YES" : "NO");
+    printf("  Is Layout NHWC: %s\n", problem.IsLayoutNHWC() ? "YES" : "NO");
+    printf("  Is FP16: %s\n", problem.IsFp16() ? "YES" : "NO");
+    printf("  Group Count: %d\n", problem.GetGroupCount());
+    printf("  Tensors Casted: %s\n", problem.IsTensorsCasted() ? "YES" : "NO");
+    printf("  All Tensors Dims Fit Into Int: %s\n", problem.AllTensorsDimsFitIntoInt() ? "YES" : "NO");
     printf("  Solver applicable: %s\n", is_applicable ? "YES" : "NO");
+    
+    // Additional debugging for environment variable
+    const char* debug_env = std::getenv("MIOPEN_DEBUG_3D_CONV_IMPLICIT_GEMM_HIP_CHANNEL_LAST_FWD_WMMAOPS");
+    printf("  Environment variable MIOPEN_DEBUG_3D_CONV_IMPLICIT_GEMM_HIP_CHANNEL_LAST_FWD_WMMAOPS: %s\n", 
+           debug_env ? debug_env : "NOT SET");
+    
+    // Additional debugging for HIP kernels
+    printf("  HIP kernels enabled: %s\n", ctx.use_hip_kernels ? "YES" : "NO");
     
     if(is_applicable)
     {
@@ -225,11 +240,18 @@ void test_grouped_convolution()
     // Test if the solver is applicable
     bool is_applicable = solver.IsApplicable(ctx, problem);
     
-    // Print test info
+    // Print detailed diagnostics
     printf("\nTesting grouped convolution with ConvHipImplicitGemm3DChannelLastFwdWmmaops:\n");
     printf("  Groups: %d\n", groups);
     printf("  Input channels per group: %d\n", input_channels_per_group);
     printf("  Output channels per group: %d\n", output_channels_per_group);
+    printf("  Is 3D: %s\n", problem.Is3d() ? "YES" : "NO");
+    printf("  Is Forward: %s\n", problem.IsDirectionForward() ? "YES" : "NO");
+    printf("  Is Layout NHWC: %s\n", problem.IsLayoutNHWC() ? "YES" : "NO");
+    printf("  Is FP16: %s\n", problem.IsFp16() ? "YES" : "NO");
+    printf("  Group Count: %d\n", problem.GetGroupCount());
+    printf("  Tensors Casted: %s\n", problem.IsTensorsCasted() ? "YES" : "NO");
+    printf("  All Tensors Dims Fit Into Int: %s\n", problem.AllTensorsDimsFitIntoInt() ? "YES" : "NO");
     printf("  Solver applicable: %s\n", is_applicable ? "YES" : "NO");
     
     // Verification
