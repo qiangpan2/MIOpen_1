@@ -267,7 +267,7 @@ struct ConvTypesHelper {
                                          ck_tile::memory_operation_enum::set,
                                          1,
                                          true,
-                                         VectorSizeC>;
+                                         VectorSizeC>>;
                                          
     // KernelType 
     using KernelType = ck_tile::GroupedConvolutionForwardKernel<GroupedConvTraitsType,
@@ -440,8 +440,8 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
     CKArgs3DChannelLastFwd<ck_tile::half_t> ck_args(problem);
 
     // Calculate grid and block sizes outside of the invoker
-    miopen::conv::DataInvokeParams dummy_params{
-        miopen::conv::ConvDataTensors{
+    miopen::conv::DataInvokeParams dummy_params(
+        ConvDataTensors{
             miopen::TensorDescriptor(),  // inDesc
             nullptr,                     // in
             miopen::TensorDescriptor(),  // wDesc
@@ -451,8 +451,10 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
         },  // tensors
         nullptr,  // workSpace
         0,        // workSpaceSize
-        false     // gfx90aFp16alt
-    };
+        false,    
+        miopen::Scalar(1.0),  // alpha
+        miopen::Scalar(0.0)   // beta
+    );
     auto host_args = ck_args.MakeHostArgs(dummy_params);
     
     using Helper = ConvTypesHelper<ck_tile::half_t, float>;
