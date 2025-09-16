@@ -332,11 +332,26 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
 {
     ConvSolution sol;
 
+    // Create KernelInfo for construction parameters
+    KernelInfo construction_parameters;
+    // Set kernel file and name for CK Tile implementation
+
+    construction_parameters.kernel_file = "conv_3d_channel_last_fwd_wmmaops.cpp";
+    construction_parameters.kernel_name = "conv_3d_channel_last_fwd_wmmaops";
+
+    // Set compile options
+    construction_parameters.comp_options =
+        std::string(" -DMIOPEN_USE_CKTILE_COMPOSABLEKERNEL=1") +
+        ctx.general_compile_options;
+
+    // Add kernel info to construction parameters
+    sol.construction_params.push_back(construction_parameters);
+
     // Create CK arguments - use half_t for FP16 input data type
     CKArgs3DChannelLastFwd<ck_tile::half_t> ck_args(problem);
 
     // Set up the invoker factory
-    sol.invoker_factory = [=](const std::vector<Kernel>& kernels) {
+    sol.invoker_factory = [&sol, ck_args, ctx, problem](const std::vector<Kernel>& kernels) {
         return [=](const Handle& handle, const AnyInvokeParams& primitive_params) {
 
             const auto& data_ctx = primitive_params.CastTo<miopen::conv::DataInvokeParams>();
@@ -440,6 +455,9 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
 
                 const dim3 grids = KernelType::GridSize(kargs);
                 const dim3 blocks = KernelType::BlockSize();
+
+                sol.construction_params[0].g_wk = {grids.x, grids.y, grids.z};
+                sol.construction_params[0].l_wk = {blocks.x, blocks.y, blocks.z};
 
                 if(!KernelType::IsSupportedArgument(kargs))
                 {
