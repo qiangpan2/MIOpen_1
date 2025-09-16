@@ -187,6 +187,95 @@ struct CKArgs3DChannelLastFwd
 
 } // namespace
 
+// Helper function to define common types and constants
+template<typename DataType, typename AccDataType>
+struct ConvTypesHelper {
+    // Constants
+    static constexpr int kBlockPerCu = 1;
+
+    static constexpr ck_tile::index_t M_Tile = 64;
+    static constexpr ck_tile::index_t N_Tile = 64;
+    static constexpr ck_tile::index_t K_Tile = 64;
+
+    static constexpr ck_tile::index_t M_Warp = 2;
+    static constexpr ck_tile::index_t N_Warp = 2;
+    static constexpr ck_tile::index_t K_Warp = 1;
+
+    static constexpr ck_tile::index_t M_Warp_Tile = 16;
+    static constexpr ck_tile::index_t N_Warp_Tile = 16;
+    static constexpr ck_tile::index_t K_Warp_Tile = 16;
+
+    static constexpr ck_tile::index_t VectorSizeA = 8;
+    static constexpr ck_tile::index_t VectorSizeB = 8;
+    static constexpr ck_tile::index_t VectorSizeC = 8;
+
+    // Type aliases
+    using InDataType = DataType;   // FP16
+    using WeiDataType = DataType;  // FP16
+    using OutDataType = DataType;  // FP16
+    using DsDataType = ck_tile::tuple<>;
+    
+    // Layouts
+    static constexpr ck_tile::index_t NDimSpatial = 3;
+    static constexpr auto ConvSpec = ck_tile::ConvolutionSpecialization::Default;
+    using InLayout = ck_tile::tensor_layout::convolution::NDHWGC;
+    using WeiLayout = ck_tile::tensor_layout::convolution::GKZYXC;
+    using OutLayout = ck_tile::tensor_layout::convolution::NDHWGK;
+    using DsLayout = ck_tile::tuple<>;
+
+    // Implicit GEMM Traits
+    using CodegenShape =
+        ck_tile::TileGemmShape<ck_tile::sequence<M_Tile, N_Tile, K_Tile>,
+                               ck_tile::sequence<M_Warp, N_Warp, K_Warp>,
+                               ck_tile::sequence<M_Warp_Tile, N_Warp_Tile, K_Warp_Tile>>;
+
+    using TilePartitioner = ck_tile::GemmTile1DPartitioner<CodegenShape>;
+    using GroupedConvTraitsType =
+        ck_tile::GroupedConvTraits<NDimSpatial, ConvSpec, InLayout, WeiLayout, DsLayout, OutLayout>;
+    
+    using CodegenPipelineProblem =
+        ck_tile::GemmPipelineProblem<InDataType,
+                                        WeiDataType,
+                                        AccDataType,
+                                        CodegenShape,
+                                        typename GroupedConvTraitsType::GroupedConvImplicitGemmTraits,
+                                        InDataType,
+                                        true,
+                                        VectorSizeA,
+                                        VectorSizeB>;
+    
+    using CodegenPipeline = ck_tile::GemmPipelineAGmemBGmemCRegV1<CodegenPipelineProblem>;
+    
+    // ConvEpilogue 
+    using ConvEpilogue = ck_tile::CShuffleEpilogue<
+        ck_tile::CShuffleEpilogueProblem<InDataType,
+                                         WeiDataType,
+                                         DsDataType,
+                                         AccDataType,
+                                         OutDataType,
+                                         typename GroupedConvTraitsType::ImplicitGemmDsLayout,
+                                         ck_tile::tensor_layout::gemm::RowMajor,
+                                         ck_tile::element_wise::PassThrough,
+                                         TilePartitioner::MPerBlock,
+                                         TilePartitioner::NPerBlock,
+                                         M_Warp,
+                                         N_Warp,
+                                         M_Warp_Tile,
+                                         N_Warp_Tile,
+                                         K_Warp_Tile,
+                                         CodegenPipelineProblem::TransposeC,
+                                         ck_tile::memory_operation_enum::set,
+                                         1,
+                                         true,
+                                         VectorSizeC>;
+                                         
+    // KernelType 
+    using KernelType = ck_tile::GroupedConvolutionForwardKernel<GroupedConvTraitsType,
+                                                                TilePartitioner,
+                                                                CodegenPipeline,
+                                                                ConvEpilogue>;
+};
+
 // Performance configuration methods implementation
 void PerformanceConfigConv3DChannelLastFwdWmmaops::HeuristicInit(
     const miopen::conv::ProblemDescription&)
@@ -352,98 +441,23 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
 
     // Calculate grid and block sizes outside of the invoker
     miopen::conv::DataInvokeParams dummy_params{
-        {nullptr, nullptr, nullptr},  // tensors (in, out, weight)
-        0,                            // workspace_size
-        false                         // exhaustive_search
+        miopen::conv::ConvDataTensors{
+            miopen::TensorDescriptor(),  // inDesc
+            nullptr,                     // in
+            miopen::TensorDescriptor(),  // wDesc
+            nullptr,                     // w
+            miopen::TensorDescriptor(),  // outDesc
+            nullptr                      // out
+        },  // tensors
+        nullptr,  // workSpace
+        0,        // workSpaceSize
+        false     // gfx90aFp16alt
     };
     auto host_args = ck_args.MakeHostArgs(dummy_params);
     
-    // Define types for the kernel
-    using DataType = ck_tile::half_t;  // FP16 input/output
-    using AccDataType = float;         // FP32 accumulation
-
-    constexpr int kBlockPerCu = 1;
-
-    constexpr ck_tile::index_t M_Tile = 64;
-    constexpr ck_tile::index_t N_Tile = 64;
-    constexpr ck_tile::index_t K_Tile = 64;
-
-    constexpr ck_tile::index_t M_Warp = 2;
-    constexpr ck_tile::index_t N_Warp = 2;
-    constexpr ck_tile::index_t K_Warp = 1;
-
-    constexpr ck_tile::index_t M_Warp_Tile = 16;
-    constexpr ck_tile::index_t N_Warp_Tile = 16;
-    constexpr ck_tile::index_t K_Warp_Tile = 16;
-
-    constexpr ck_tile::index_t VectorSizeA = 8;
-    constexpr ck_tile::index_t VectorSizeB = 8;
-    constexpr ck_tile::index_t VectorSizeC = 8;
-
-    // Define types matching the example
-    using InDataType = DataType;   // FP16
-    using WeiDataType = DataType;  // FP16
-    using AccDataType = float;     // FP32
-    using OutDataType = DataType;  // FP16
-    using DsDataType = ck_tile::tuple<>;
+    using Helper = ConvTypesHelper<ck_tile::half_t, float>;
+    using KernelType = typename Helper::KernelType;
     
-    // example use template with this NDimSpatial
-    constexpr ck_tile::index_t NDimSpatial = 3;
-    constexpr auto ConvSpec = ck_tile::ConvolutionSpecialization::Default;
-    using InLayout = ck_tile::tensor_layout::convolution::NDHWGC;
-    using WeiLayout = ck_tile::tensor_layout::convolution::GKZYXC;
-    using OutLayout = ck_tile::tensor_layout::convolution::NDHWGK;
-    using DsLayout = ck_tile::tuple<>;
-
-    // Implicit GEMM Traits - exactly as in the example
-    using CodegenShape =
-        ck_tile::TileGemmShape<ck_tile::sequence<M_Tile, N_Tile, K_Tile>,
-                               ck_tile::sequence<M_Warp, N_Warp, K_Warp>,
-                               ck_tile::sequence<M_Warp_Tile, N_Warp_Tile, K_Warp_Tile>>;
-
-    using TilePartitioner = ck_tile::GemmTile1DPartitioner<CodegenShape>;
-    using GroupedConvTraitsType =
-        ck_tile::GroupedConvTraits<NDimSpatial, ConvSpec, InLayout, WeiLayout, DsLayout, OutLayout>;
-    
-    using CodegenPipelineProblem =
-        ck_tile::GemmPipelineProblem<InDataType,
-                                        WeiDataType,
-                                        AccDataType,
-                                        CodegenShape,
-                                        typename GroupedConvTraitsType::GroupedConvImplicitGemmTraits,
-                                        InDataType,
-                                        true,
-                                        VectorSizeA,
-                                        VectorSizeB>;
-    
-    using CodegenPipeline = ck_tile::GemmPipelineAGmemBGmemCRegV1<CodegenPipelineProblem>;
-
-    using ConvEpilogue = ck_tile::CShuffleEpilogue<
-        ck_tile::CShuffleEpilogueProblem<InDataType,
-                                         WeiDataType,
-                                         DsDataType,
-                                         AccDataType,
-                                         OutDataType,
-                                         typename GroupedConvTraitsType::ImplicitGemmDsLayout,
-                                         ck_tile::tensor_layout::gemm::RowMajor,
-                                         ck_tile::element_wise::PassThrough,
-                                         TilePartitioner::MPerBlock,
-                                         TilePartitioner::NPerBlock,
-                                         M_Warp,
-                                         N_Warp,
-                                         M_Warp_Tile,
-                                         N_Warp_Tile,
-                                         K_Warp_Tile,
-                                         CodegenPipelineProblem::TransposeC,
-                                         ck_tile::memory_operation_enum::set,
-                                         1,
-                                         true,
-                                         VectorSizeC>>;
-
-    using KernelType = ck_tile::GroupedConvolutionForwardKernel<GroupedConvTraitsType,
-                                                                TilePartitioner,
-                                                                CodegenPipeline,
-                                                                ConvEpilogue>;
     auto kargs = KernelType::MakeKernelArgs(host_args);
 
     const dim3 grids = KernelType::GridSize(kargs);
