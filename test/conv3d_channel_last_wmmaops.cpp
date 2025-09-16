@@ -60,15 +60,16 @@ struct conv3d_channel_last_wmmaops_driver : conv3d_driver<T>
         this->add(this->out_layout, "out_layout", this->generate_data({"NDHWC"}));
         
         // Add specific test configurations that should trigger your solver
-        this->add(this->batch_size, "batch_size", this->generate_data({1, 2}));
-        this->add(this->input_channels, "input_channels", this->generate_data({32, 64}));
-        this->add(this->output_channels, "output_channels", this->generate_data({32, 64}));
+        // MIOpenDriver convfp16 -n 1 -c 16 --in_d 5 -H 104 -W 60 -k 16 --fil_d 1 -y 1 -x 1 --pad_d 0 -p 0 -q 0 --conv_stride_d 1 -u 1 -v 1 --dilation_d 1 -l 1 -j 1 --spatial_dim 3 --in_layout NDHWC --fil_layout NDHWC --out_layout NDHWC -m conv -g 1 -F 1 -t 1
+        this->add(this->batch_size, "batch_size", this->generate_data({1}));
+        this->add(this->input_channels, "input_channels", this->generate_data({16}));
+        this->add(this->output_channels, "output_channels", this->generate_data({16}));
         this->add(this->spatial_dim_elements, "spatial_dim_elements", 
-                  this->generate_data({{8, 8, 8}, {16, 16, 16}}));
+                  this->generate_data({{5, 104, 60}}));  // in_d=5, H=104, W=60
         this->add(this->filter_dims, "filter_dims", 
-                  this->generate_data({{3, 3, 3}, {1, 1, 1}}));
+                  this->generate_data({{1, 1, 1}}));  // fil_d=1, y=1, x=1
         this->add(this->pads_strides_dilations, "pads_strides_dilations",
-                  this->generate_data({{{1, 1, 1}, {1, 1, 1}, {1, 1, 1}}}));
+                  this->generate_data({{{0, 0, 0}, {1, 1, 1}, {1, 1, 1}}}));  // pad_d=0, p=0, q=0; conv_stride_d=1, u=1, v=1; dilation_d=1, l=1, j=1
         
         // Enable environment variable to force use of your solver
         this->add(disable_check, "disable_check", this->generate_data({"false"}));
@@ -89,9 +90,8 @@ void test_solver_applicability()
     ctx.use_hip_kernels = true;
     
     // Create a 3D convolution problem with channel-last layout and FP16 data type
-    // Create tensor descriptors with NDHWC layout directly
-    std::vector<std::size_t> input_lens = {1, 32, 8, 8, 8};
-    std::vector<std::size_t> weight_lens = {64, 32, 3, 3, 3};
+    std::vector<std::size_t> input_lens = {1, 16, 5, 104, 60};  // n=1, c=16, in_d=5, H=104, W=60
+    std::vector<std::size_t> weight_lens = {16, 16, 1, 1, 1};   // k=16, c=16, fil_d=1, y=1, x=1
     
     // Create tensor descriptors with NDHWC layout
     auto input_tensor_desc = miopen::TensorDescriptor(miopenHalf, miopenTensorNDHWC, input_lens);
@@ -102,9 +102,9 @@ void test_solver_applicability()
     miopenCreateConvolutionDescriptor(&conv_desc_raw);
     
     // Set 3D convolution parameters
-    int padA[3] = {1, 1, 1};
-    int strideA[3] = {1, 1, 1};
-    int dilationA[3] = {1, 1, 1};
+    int padA[3] = {0, 0, 0};      // pad_d=0, p=0, q=0
+    int strideA[3] = {1, 1, 1};   // conv_stride_d=1, u=1, v=1
+    int dilationA[3] = {1, 1, 1}; // dilation_d=1, l=1, j=1
     miopenInitConvolutionNdDescriptor(conv_desc_raw, 3, padA, strideA, dilationA, miopenConvolution);
     
     // Wrap the C API descriptor in C++ class
@@ -126,8 +126,8 @@ void test_solver_applicability()
     // Print test info
     printf("Testing ConvHipImplicitGemm3DChannelLastFwdWmmaops solver applicability:\n");
     printf("  Problem: 3D Convolution with NDHWC layout, FP16 data type\n");
-    printf("  Input shape: N=1, C=32, D=8, H=8, W=8\n");
-    printf("  Weight shape: K=64, C=32, Z=3, Y=3, X=3\n");
+    printf("  Input shape: N=1, C=16, D=5, H=104, W=60\n");
+    printf("  Weight shape: K=16, C=16, Z=1, Y=1, X=1\n");
     printf("  Solver applicable: %s\n", is_applicable ? "YES" : "NO");
     
     if(is_applicable)
@@ -201,9 +201,9 @@ void test_grouped_convolution()
     miopenCreateConvolutionDescriptor(&conv_desc_raw);
     
     // Set 3D convolution parameters
-    int padA[3] = {1, 1, 1};
-    int strideA[3] = {1, 1, 1};
-    int dilationA[3] = {1, 1, 1};
+    int padA[3] = {0, 0, 0};      // pad_d=0, p=0, q=0
+    int strideA[3] = {1, 1, 1};   // conv_stride_d=1, u=1, v=1
+    int dilationA[3] = {1, 1, 1}; // dilation_d=1, l=1, j=1
     miopenInitConvolutionNdDescriptor(conv_desc_raw, 3, padA, strideA, dilationA, miopenConvolution);
     
     // Set group count

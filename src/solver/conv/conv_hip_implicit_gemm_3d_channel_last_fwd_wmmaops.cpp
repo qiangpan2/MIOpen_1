@@ -261,8 +261,9 @@ bool ConvHipImplicitGemm3DChannelLastFwdWmmaops::IsApplicable(
         return false;
     }
 
-    // Check data type support (e.g., FP32, FP16)
-    if(!(problem.IsFp32() || problem.IsFp16()))
+    // Check data type support (specifically for FP16 with FP32 accumulation)
+    // This solver is designed for FP16 input data type with FP32 accumulation
+    if(!problem.IsFp16())
     {
         return false;
     }
@@ -331,8 +332,8 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
 {
     ConvSolution sol;
 
-    // Create CK arguments
-    CKArgs3DChannelLastFwd<float> ck_args(problem);
+    // Create CK arguments - use half_t for FP16 input data type
+    CKArgs3DChannelLastFwd<ck_tile::half_t> ck_args(problem);
 
     // Set up the invoker factory
     sol.invoker_factory = [=](const std::vector<Kernel>& kernels) {
@@ -343,7 +344,9 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
             // Create the host arguments
             auto host_args = ck_args.MakeHostArgs(data_ctx);
             
-            using DataType = ck_tile::half_t;
+            // Define types for the kernel
+            using DataType = ck_tile::half_t;  // FP16 input/output
+            using AccDataType = float;         // FP32 accumulation
 
             // Create a stream_config object for CK Tile
             ck_tile::stream_config ck_stream_config{handle.GetStream(), handle.IsProfilingEnabled()};
@@ -367,10 +370,10 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
             constexpr ck_tile::index_t VectorSizeC = 8;
 
             // Define types matching the example
-            using InDataType = DataType;
-            using WeiDataType = DataType;
-            using AccDataType = float;
-            using OutDataType = DataType;
+            using InDataType = DataType;   // FP16
+            using WeiDataType = DataType;  // FP16
+            using AccDataType = float;     // FP32
+            using OutDataType = DataType;  // FP16
             using DsDataType = ck_tile::tuple<>;
             
             // example use template with this NDimSpatial
