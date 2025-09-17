@@ -29,6 +29,7 @@
 #include <miopen/generic_search.hpp>
 #include <miopen/conv/data_invoke_params.hpp>
 #include <miopen/solver/problem_description_interpreter.hpp>
+#include <iostream>
 
 // Include Composable Kernel headers for 3D convolution with channel last layout
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_CKTILE_COMPOSABLEKERNEL
@@ -421,21 +422,6 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
 {
     ConvSolution sol;
 
-    // Create KernelInfo for construction parameters
-    KernelInfo construction_parameters;
-    // Set kernel file and name for CK Tile implementation
-
-    construction_parameters.kernel_file = "conv_3d_channel_last_fwd_wmmaops.cpp";
-    construction_parameters.kernel_name = "conv_3d_channel_last_fwd_wmmaops";
-
-    // Set compile options
-    construction_parameters.comp_options =
-        std::string(" -DMIOPEN_USE_CKTILE_COMPOSABLEKERNEL=1") +
-        ctx.general_compile_options;
-
-    // Add kernel info to construction parameters
-    sol.construction_params.push_back(construction_parameters);
-
     // Create CK arguments - use half_t for FP16 input data type
     CKArgs3DChannelLastFwd<ck_tile::half_t> ck_args(problem);
 
@@ -456,7 +442,7 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
         miopen::Scalar(0.0)   // beta
     );
     auto host_args = ck_args.MakeHostArgs(dummy_params);
-    
+
     using Helper = ConvTypesHelper<ck_tile::half_t, float>;
     using KernelType = typename Helper::KernelType;
     
@@ -465,10 +451,7 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
     const dim3 grids = KernelType::GridSize(kargs);
     const dim3 blocks = KernelType::BlockSize();
 
-    // Update sol.construction_params with actual grid and block sizes
-    sol.construction_params[0].g_wk = {grids.x, grids.y, grids.z};
-    sol.construction_params[0].l_wk = {blocks.x, blocks.y, blocks.z};
-
+    std::cout<<"Update sol.construction_params with actual grid and block sizes"<<std::endl;
     // Set up the invoker factory
     sol.invoker_factory = [=](const std::vector<Kernel>& kernels) {
         return [=](const Handle& handle, const AnyInvokeParams& primitive_params) {
