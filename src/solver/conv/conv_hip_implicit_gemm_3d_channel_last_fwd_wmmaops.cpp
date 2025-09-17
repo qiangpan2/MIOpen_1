@@ -425,33 +425,6 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
     // Create CK arguments - use half_t for FP16 input data type
     CKArgs3DChannelLastFwd<ck_tile::half_t> ck_args(problem);
 
-    // Calculate grid and block sizes outside of the invoker
-    miopen::conv::DataInvokeParams dummy_params(
-        ConvDataTensors{
-            miopen::TensorDescriptor(),  // inDesc
-            nullptr,                     // in
-            miopen::TensorDescriptor(),  // wDesc
-            nullptr,                     // w
-            miopen::TensorDescriptor(),  // outDesc
-            nullptr                      // out
-        },  // tensors
-        nullptr,  // workSpace
-        0,        // workSpaceSize
-        false,    
-        miopen::Scalar(1.0),  // alpha
-        miopen::Scalar(0.0)   // beta
-    );
-    auto host_args = ck_args.MakeHostArgs(dummy_params);
-
-    using Helper = ConvTypesHelper<ck_tile::half_t, float>;
-    using KernelType = typename Helper::KernelType;
-    
-    auto kargs = KernelType::MakeKernelArgs(host_args);
-
-    const dim3 grids = KernelType::GridSize(kargs);
-    const dim3 blocks = KernelType::BlockSize();
-
-    std::cout<<"Update sol.construction_params with actual grid and block sizes"<<std::endl;
     // Set up the invoker factory
     sol.invoker_factory = [=](const std::vector<Kernel>& kernels) {
         return [=](const Handle& handle, const AnyInvokeParams& primitive_params) {
@@ -470,12 +443,12 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
             
             constexpr int kBlockPerCu = 1;
 
-            constexpr ck_tile::index_t M_Tile = 64;
-            constexpr ck_tile::index_t N_Tile = 64;
-            constexpr ck_tile::index_t K_Tile = 64;
+            constexpr ck_tile::index_t M_Tile =16;
+            constexpr ck_tile::index_t N_Tile = 16;
+            constexpr ck_tile::index_t K_Tile = 16;
 
-            constexpr ck_tile::index_t M_Warp = 2;
-            constexpr ck_tile::index_t N_Warp = 2;
+            constexpr ck_tile::index_t M_Warp = 1;
+            constexpr ck_tile::index_t N_Warp = 1;
             constexpr ck_tile::index_t K_Warp = 1;
 
             constexpr ck_tile::index_t M_Warp_Tile = 16;
