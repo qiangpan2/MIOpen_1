@@ -77,15 +77,12 @@ MIOpenDriver convfp16 -n 1 -c 16 --in_d 5 -H 104 -W 60 -k 16 --fil_d 1 -y 1 -x 1
 
 ## 运行 CK Tile 示例代码
 
-要运行 CK Tile 示例代码以匹配此 MIOpenDriver 命令，可以使用以下命令：
+以下为一组use case的mapping 
 
 ```bash
-./example/ck_tile/20_grouped_convolution/grouped_convolution_forward \
-  --n 1 --c 16 --d 5 --h 104 --w 60 --k 16 --z 1 --y 1 --x 1 \
-  --stride_d 1 --stride_h 1 --stride_w 1 \
-  --dilation_d 1 --dilation_h 1 --dilation_w 1 \
-  --lpad_d 0 --lpad_h 0 --lpad_w 0 --rpad_d 0 --rpad_h 0 --rpad_w 0 \
-  --g 1 \
-  --in_layout NDHWGC --wei_layout GKZYXC --out_layout NDHWGK \
-  --prec fp16 --v 1
+
+./MIOpenDriver convfp16 -n 1 -c 16 --in_d 5 -H 104 -W 60 -k 16 --fil_d 1 -y 1 -x 1 --pad_d 0 -p 0 -q 0 --conv_stride_d 1 -u 1 -v 1 --dilation_d 1 -l 1 -j 1 --spatial_dim 3 --in_layout NDHWC --fil_layout NDHWC --out_layout NDHWC -m conv -g 1 -F 1 -t 1
+
+./bin/tile_example_grouped_conv_fwd -n=1 -c=16 -d=5 -h=104 -w=60 -k=16 -z=1 -y=1 -x=1 -stride_d=1 -stride_h=1 -stride_w=1 -dilation_d=1 -dilation_h=1 -dilation_w=1 -lpad_d=0 -lpad_h=0 -lpad_w=0 -rpad_d=0 -rpad_h=0 -rpad_w=0 -g=1 -in_layout=NDHWGC -wei_layout=GKZYXC -out_layout=NDHWGK -prec=fp16 -v=1
+
 ```
