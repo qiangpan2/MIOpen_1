@@ -366,9 +366,9 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
             constexpr ck_tile::index_t N_Warp_Tile = 16;
             constexpr ck_tile::index_t K_Warp_Tile = 16;
 
-            constexpr ck_tile::index_t VectorSizeA = 8;
-            constexpr ck_tile::index_t VectorSizeB = 8;
-            constexpr ck_tile::index_t VectorSizeC = 8;
+            constexpr ck_tile::index_t VectorSizeA = 1;
+            constexpr ck_tile::index_t VectorSizeB = 1;
+            constexpr ck_tile::index_t VectorSizeC = 1;
 
             // Define types matching the example
             using InDataType = DataType;   // FP16
