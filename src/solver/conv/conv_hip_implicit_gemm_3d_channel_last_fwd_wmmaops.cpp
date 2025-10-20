@@ -29,7 +29,9 @@
 #include <miopen/generic_search.hpp>
 #include <miopen/conv/data_invoke_params.hpp>
 #include <miopen/solver/problem_description_interpreter.hpp>
+#include <miopen/invoker.hpp>
 #include <iostream>
+#include <functional>
 
 // Include Composable Kernel headers for 3D convolution with channel last layout
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_CKTILE_COMPOSABLEKERNEL
@@ -462,7 +464,7 @@ ConvSolution ConvHipImplicitGemm3DChannelLastFwdWmmaops::GetSolution(
     ConvSolution sol;
 
     // Set up the invoker factory
-    sol.invoker_factory = [=](const std::vector<Kernel>& kernels) {
+    sol.invoker_factory = [=](const std::vector<Kernel>& kernels) -> Invoker {
         // Create CK arguments with the appropriate data type based on problem
         if(problem.IsFp16()) {
             CKArgs3DChannelLastFwd<ck_tile::half_t> ck_args(problem);
